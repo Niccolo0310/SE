@@ -3,7 +3,7 @@ package ch.supsi.minesweeper.controller;
 import ch.supsi.minesweeper.model.GameEventHandler;
 import ch.supsi.minesweeper.model.GameModel;
 import ch.supsi.minesweeper.model.JsonGamePersistence;
-import ch.supsi.minesweeper.model.GamePersistence;
+import ch.supsi.minesweeper.persistence.GamePersistence;
 import ch.supsi.minesweeper.model.PlayerEventHandler;
 import ch.supsi.minesweeper.view.DataView;
 import ch.supsi.minesweeper.view.MenuBarViewFxml;
@@ -28,6 +28,8 @@ public class GameController implements GameEventHandler, PlayerEventHandler {
     private       List<DataView>    views;
     private final int               defaultBombs;
     private final ResourceBundle    bundle;
+    // mostra win/lose una sola volta per partita
+    private volatile boolean gameEndNotified = false;
 
     private Path currentFile = null;
 
@@ -57,6 +59,7 @@ public class GameController implements GameEventHandler, PlayerEventHandler {
     @Override
     public void newGame() {
         Platform.runLater(() -> {
+            gameEndNotified = false;
             int max   = gameModel.getRows() * gameModel.getCols() - 1;
             int bombs = Math.max(1, Math.min(defaultBombs, max));
 
@@ -145,6 +148,7 @@ public class GameController implements GameEventHandler, PlayerEventHandler {
         try {
             persistence.load(gameModel, currentFile);
 
+            gameEndNotified = false;
             // aggiorna board e feedback bar, non il menu
             views.stream()
                     .filter(v -> !(v instanceof MenuBarViewFxml))
@@ -181,6 +185,7 @@ public class GameController implements GameEventHandler, PlayerEventHandler {
             try {
                 persistence.load(gameModel, currentFile);
 
+                gameEndNotified = false;
                 // aggiorna board e feedback bar, non il menu
                 views.stream()
                         .filter(v -> !(v instanceof MenuBarViewFxml))
@@ -230,6 +235,8 @@ public class GameController implements GameEventHandler, PlayerEventHandler {
 
     @Override
     public void win() {
+        if (gameEndNotified) return;   //evita loop di popup
+        gameEndNotified = true;
         Platform.runLater(() -> {
             // disabilita Save e Save As quando si vince
             MenuBarViewFxml.getInstance().disableSaveOptions();
@@ -243,6 +250,8 @@ public class GameController implements GameEventHandler, PlayerEventHandler {
 
     @Override
     public void lose() {
+        if (gameEndNotified) return;   //evita loop di popup
+        gameEndNotified = true;
         Platform.runLater(() -> {
             // disabilita Save e Save As quando si perde
             MenuBarViewFxml.getInstance().disableSaveOptions();

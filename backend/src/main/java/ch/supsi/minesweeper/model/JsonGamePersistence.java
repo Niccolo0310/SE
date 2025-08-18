@@ -1,5 +1,6 @@
 package ch.supsi.minesweeper.model;
 
+import ch.supsi.minesweeper.persistence.GamePersistence;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.IOException;

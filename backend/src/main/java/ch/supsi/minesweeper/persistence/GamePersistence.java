@@ -1,4 +1,6 @@
-package ch.supsi.minesweeper.model;
+package ch.supsi.minesweeper.persistence;
+
+import ch.supsi.minesweeper.model.GameModel;
 
 import java.io.IOException;
 import java.nio.file.Path;
