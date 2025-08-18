@@ -28,6 +28,12 @@ public class GameModel extends AbstractModel
         return myself;
     }
 
+    // metodo pubblico “alto livello” per la persistenza
+    public void restore(GameStateJson state) {
+        loadFromState(state);  // questi due possono restare package-private
+        markStarted();
+    }
+
 
     public int getRows()     { return rows; }
     public int getCols()     { return cols; }
@@ -168,7 +174,7 @@ public class GameModel extends AbstractModel
         return revealedCount == (rows * cols - mines);
     }
 
-    void loadFromState(GameStateJson state) {
+    public void loadFromState(GameStateJson state) {
         this.mines = state.getMines();
 
         // Ricreo matrici e copio campi
@@ -210,7 +216,7 @@ public class GameModel extends AbstractModel
         }
     }
 
-    void markStarted() {
+    public void markStarted() {
         this.started = true;
     }
 
