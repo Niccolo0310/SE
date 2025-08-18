@@ -62,10 +62,15 @@ public class GameController implements GameEventHandler, PlayerEventHandler {
 
             gameModel.setMines(bombs);
             gameModel.newGame();
-            views.forEach(DataView::update);
+
+// aggiorna solo board e feedback bar
+            views.stream()
+                    .filter(v -> !(v instanceof MenuBarViewFxml))
+                    .forEach(DataView::update);
 
             // riabilita Save e Save As su nuova partita
             MenuBarViewFxml.getInstance().enableSaveOptions();
+
 
             Alert info = new Alert(AlertType.INFORMATION);
             info.setTitle(rb().getString("dialog.new.title"));
@@ -84,7 +89,6 @@ public class GameController implements GameEventHandler, PlayerEventHandler {
         }
         try {
             persistence.save(gameModel, currentFile);
-            views.forEach(DataView::update);
             Platform.runLater(() -> {
                 Alert info = new Alert(AlertType.INFORMATION,
                         rb().getString("dialog.save.success"));
@@ -113,7 +117,7 @@ public class GameController implements GameEventHandler, PlayerEventHandler {
             currentFile = file.toPath();
             try {
                 persistence.save(gameModel, currentFile);
-                views.forEach(DataView::update);
+               // views.forEach(DataView::update);
                 Platform.runLater(() -> {
                     Alert info = new Alert(AlertType.INFORMATION,
                             rb().getString("dialog.save.success"));
@@ -134,15 +138,18 @@ public class GameController implements GameEventHandler, PlayerEventHandler {
 
     @Override
     public void load() {
-        // Se non c’è ancora un currentFile, apri con FileChooser
         if (currentFile == null) {
             open();
             return;
         }
         try {
             persistence.load(gameModel, currentFile);
-            views.forEach(DataView::update);
-            // Riabilita Save/Save As dopo aver caricato
+
+            // aggiorna board e feedback bar, non il menu
+            views.stream()
+                    .filter(v -> !(v instanceof MenuBarViewFxml))
+                    .forEach(DataView::update);
+
             MenuBarViewFxml.getInstance().enableSaveOptions();
 
             Platform.runLater(() -> {
@@ -173,8 +180,12 @@ public class GameController implements GameEventHandler, PlayerEventHandler {
             currentFile = file.toPath();
             try {
                 persistence.load(gameModel, currentFile);
-                views.forEach(DataView::update);
-                // Riabilita Save/Save As dopo aver caricato
+
+                // aggiorna board e feedback bar, non il menu
+                views.stream()
+                        .filter(v -> !(v instanceof MenuBarViewFxml))
+                        .forEach(DataView::update);
+
                 MenuBarViewFxml.getInstance().enableSaveOptions();
 
                 Platform.runLater(() -> {

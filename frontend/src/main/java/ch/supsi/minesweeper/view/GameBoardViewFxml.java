@@ -5,7 +5,7 @@ import ch.supsi.minesweeper.model.AbstractModel;
 import ch.supsi.minesweeper.model.GameEventHandler;
 import ch.supsi.minesweeper.model.GameModel;
 import ch.supsi.minesweeper.model.PlayerEventHandler;
-import ch.supsi.minesweeper.util.AppPreferences;
+import javafx.animation.AnimationTimer;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
@@ -15,6 +15,7 @@ import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.GridPane;
+
 import java.io.IOException;
 import java.net.URL;
 import java.util.*;
@@ -31,8 +32,10 @@ public class GameBoardViewFxml implements ControlledFxView {
     private GameModel          gameModel;
 
     @FXML private GridPane containerPane;
-    private final Map<Integer, Image> numberImages = new HashMap<>();
     private Image flagImg, bombImg;
+
+    // Coda per reveal progressivo
+    private final Queue<int[]> revealQueue = new ArrayDeque<>();
 
     private GameBoardViewFxml(ResourceBundle bundle) {
         this.bundle = bundle;
@@ -60,6 +63,9 @@ public class GameBoardViewFxml implements ControlledFxView {
         gameEventHandler   = (GameEventHandler)   evt;
         gameModel          = (GameModel) model;
         setupGrid();
+
+        // Avvia animazione progressiva per il reveal
+        startRevealAnimator();
     }
 
     @Override
@@ -75,26 +81,17 @@ public class GameBoardViewFxml implements ControlledFxView {
             int col = Optional.ofNullable(GridPane.getColumnIndex(btn)).orElse(0);
 
             if (gameModel.isRevealed(row, col)) {
-                if (gameModel.hasMineAt(row, col)) {
-                    btn.setGraphic(makeIcon(bombImg));
-                } else {
-                    int cnt = gameModel.getNeighborCountAt(row, col);
-                    if (cnt > 0) {
-                        btn.setGraphic(makeIcon(numberImages.get(cnt)));
-                    } else {
-                        btn.setGraphic(null);
-                    }
-                }
+                drawCell(btn, row, col);
                 btn.setDisable(true);
             }
             else if (gameModel.isFlagged(row, col)) {
-                // se con bandiera
                 btn.setGraphic(makeIcon(flagImg));
+                btn.setText("");
                 btn.setDisable(false);
             }
             else {
-                // cella coperta e non flaggata
                 btn.setGraphic(null);
+                btn.setText("");
                 btn.setDisable(!gameModel.isStarted());
             }
         }
@@ -121,45 +118,40 @@ public class GameBoardViewFxml implements ControlledFxView {
             gameModel.toggleFlag(r, c);
             if (gameModel.isFlagged(r, c)) {
                 btn.setGraphic(makeIcon(flagImg));
+                btn.setText("");
             } else {
                 btn.setGraphic(null);
             }
             UserFeedbackViewFxml.getInstance().update();
         }
         else if (e.getButton() == MouseButton.PRIMARY && !gameModel.isFlagged(r, c)) {
-            revealCell(r, c);
+            List<int[]> opened = gameModel.revealArea(r, c);
+            revealQueue.addAll(opened);
+
+            // 👇 controllo immediato: se hai cliccato una mina → perdi
+            if (gameModel.hasMineAt(r, c)) {
+                disableAll();
+                gameEventHandler.lose();
+            }
+        }
+        else if (e.getButton() == MouseButton.PRIMARY && !gameModel.isFlagged(r, c)) {
+            List<int[]> opened = gameModel.revealArea(r, c);
+            revealQueue.addAll(opened); // le celle vanno aggiornate progressivamente
         }
         e.consume();
     }
 
-    private void revealCell(int r, int c) {
-        List<int[]> opened = gameModel.revealArea(r, c);
-
-        for (int[] pos : opened) {
-            int row = pos[0], col = pos[1];
-            Button b = getButtonAt(row, col);
-
-            if (gameModel.hasMineAt(row, col)) {
-                b.setGraphic(makeIcon(bombImg));
-            } else {
-                int cnt = gameModel.getNeighborCountAt(row, col);
-                if (cnt > 0) {
-                    b.setGraphic(makeIcon(numberImages.get(cnt)));
-                } else {
-                    b.setGraphic(null);
-                }
-            }
-            b.setDisable(true);
+    // Disegna singola cella (bomba, numero, vuoto)
+    private void drawCell(Button b, int row, int col) {
+        if (gameModel.hasMineAt(row, col)) {
+            b.setGraphic(makeIcon(bombImg));
+            b.setText("");
+        } else {
+            int cnt = gameModel.getNeighborCountAt(row, col);
+            b.setGraphic(null);
+            b.setText(cnt > 0 ? String.valueOf(cnt) : "");
         }
-
-        if (gameModel.hasMineAt(r, c)) {
-            disableAll();
-            gameEventHandler.lose();
-        }
-        else if (gameModel.isWin()) {
-            disableAll();
-            gameEventHandler.win();
-        }
+        b.setDisable(true);
     }
 
     private void disableAll() {
@@ -169,16 +161,13 @@ public class GameBoardViewFxml implements ControlledFxView {
             int cc = Optional.ofNullable(GridPane.getColumnIndex(b)).orElse(0);
             if (gameModel.hasMineAt(rr, cc)) {
                 b.setGraphic(makeIcon(bombImg));
+                b.setText("");
             }
             b.setDisable(true);
         }
     }
 
     private void loadImages() {
-        for (int i = 1; i <= 8; i++) {
-            numberImages.put(i,
-                    new Image(getClass().getResourceAsStream("/images/" + i + ".png")));
-        }
         flagImg = new Image(getClass().getResourceAsStream("/images/flag.png"));
         bombImg = new Image(getClass().getResourceAsStream("/images/bomb.png"));
     }
@@ -201,5 +190,28 @@ public class GameBoardViewFxml implements ControlledFxView {
         iv.setFitWidth(IMAGE_SIZE);
         iv.setFitHeight(IMAGE_SIZE);
         return iv;
+    }
+
+    // Reveal progressivo con AnimationTimer
+    private void startRevealAnimator() {
+        AnimationTimer timer = new AnimationTimer() {
+            @Override
+            public void handle(long now) {
+                int batch = 15; // quante celle aggiornare per frame
+                for (int i = 0; i < batch && !revealQueue.isEmpty(); i++) {
+                    int[] pos = revealQueue.poll();
+                    int row = pos[0], col = pos[1];
+                    Button b = getButtonAt(row, col);
+                    drawCell(b, row, col);
+                }
+
+                // check win/lose alla fine di ogni batch
+                if (gameModel.isWin()) {
+                    disableAll();
+                    gameEventHandler.win();
+                }
+            }
+        };
+        timer.start();
     }
 }
