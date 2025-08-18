@@ -128,7 +128,7 @@ public class GameBoardViewFxml implements ControlledFxView {
             List<int[]> opened = gameModel.revealArea(r, c);
             revealQueue.addAll(opened);
 
-            // 👇 controllo immediato: se hai cliccato una mina → perdi
+            // controllo immediato: se hai cliccato una mina → perdi
             if (gameModel.hasMineAt(r, c)) {
                 disableAll();
                 gameEventHandler.lose();
