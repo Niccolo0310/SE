@@ -5,6 +5,7 @@ import ch.supsi.minesweeper.controller.EventHandler;
 import ch.supsi.minesweeper.model.GameEventHandler;
 import ch.supsi.minesweeper.model.GameModel;
 import ch.supsi.minesweeper.util.AppPreferences;
+import ch.supsi.minesweeper.controller.MenuController;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -37,19 +38,21 @@ public class MenuBarViewFxml implements ControlledFxView {
     private static MenuBarViewFxml myself;
     private GameEventHandler gameEventHandler;
     private GameModel        gameModel;
+    private final MenuController menu = MenuController.getInstance();
 
-    private MenuBarViewFxml(ResourceBundle bundle) {
-        this.bundle = bundle;
+    public MenuBarViewFxml() {
+        this.bundle = ResourceBundle.getBundle(
+                "i18n.messages",
+                Locale.forLanguageTag(AppPreferences.getLang())
+        );
     }
-
     public static MenuBarViewFxml getInstance(ResourceBundle bundle) {
         if (myself == null) {
-            myself = new MenuBarViewFxml(bundle);
             try {
                 URL url = MenuBarViewFxml.class.getResource("/menubar.fxml");
                 FXMLLoader loader = new FXMLLoader(url, bundle);
-                loader.setController(myself);
                 loader.load();
+                myself = loader.getController();
             } catch (IOException ex) {
                 throw new RuntimeException("Error loading menubar.fxml", ex);
             }
@@ -179,4 +182,25 @@ public class MenuBarViewFxml implements ControlledFxView {
         saveMenuItem.setDisable(false);
         saveAsMenuItem.setDisable(false);
     }
+
+    @FXML
+    private void onNew() { MenuController.getInstance().newGame(); }
+
+    @FXML
+    private void onOpen() { MenuController.getInstance().open(); }
+
+    @FXML
+    private void onSave() { MenuController.getInstance().save(); }
+
+    @FXML
+    private void onSaveAs() { MenuController.getInstance().saveAs(); }
+
+    @FXML
+    private void onAbout() { MenuController.getInstance().about(); }
+
+    @FXML
+    private void onHelp() { MenuController.getInstance().help(); }
+
+    @FXML
+    private void onExit() { MenuController.getInstance().exit(); }
 }

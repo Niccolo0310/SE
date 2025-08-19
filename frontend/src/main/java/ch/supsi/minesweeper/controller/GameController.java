@@ -53,6 +53,15 @@ public class GameController implements EventHandler {
     public void resetEndNotification() {
         this.gameEndNotified = false;
     }
+    // salva sul path passato
+    public void saveTo(Path path) throws IOException {
+        persistence.save(gameModel, path);
+    }
+    // carica dal path passato
+    public void loadFrom(Path path) throws IOException {
+        persistence.load(gameModel, path);
+    }
+
 
     private ResourceBundle rb() {
         return bundle;

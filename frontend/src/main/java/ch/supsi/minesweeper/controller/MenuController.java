@@ -1,8 +1,5 @@
 package ch.supsi.minesweeper.controller;
 
-import ch.supsi.minesweeper.infrastructure.JsonGameRepository;
-import ch.supsi.minesweeper.model.GameModel;
-import ch.supsi.minesweeper.persistence.GameRepository;
 import ch.supsi.minesweeper.util.AppPreferences;
 import ch.supsi.minesweeper.view.DataView;
 import ch.supsi.minesweeper.view.MenuBarViewFxml;
@@ -20,16 +17,11 @@ import java.util.ResourceBundle;
 public class MenuController {
 
     private static MenuController myself;
-
-    private final GameModel gameModel;
-    private final GameRepository persistence;
     private List<DataView> views;
     private final ResourceBundle bundle;
     private Path currentFile = null;
 
     private MenuController() {
-        this.gameModel  = GameModel.getInstance();
-        this.persistence   = new JsonGameRepository();
         this.bundle = ResourceBundle.getBundle("i18n.messages",
                 Locale.forLanguageTag(AppPreferences.getLang()));
     }
@@ -47,13 +39,17 @@ public class MenuController {
     private ResourceBundle rb() { return bundle; }
 
 
+    public void newGame() {
+        GameController.getInstance().newGame();
+    }
+
     public void save() {
         if (currentFile == null) {
             saveAs();
             return;
         }
         try {
-            persistence.save(gameModel, currentFile);
+            GameController.getInstance().saveTo(currentFile);
             Platform.runLater(() -> {
                 Alert info = new Alert(Alert.AlertType.INFORMATION,
                         rb().getString("dialog.save.success"));
@@ -80,34 +76,16 @@ public class MenuController {
         File file = chooser.showSaveDialog(null);
         if (file != null) {
             currentFile = file.toPath();
-            try {
-                persistence.save(gameModel, currentFile);
-                Platform.runLater(() -> {
-                    Alert info = new Alert(Alert.AlertType.INFORMATION,
-                            rb().getString("dialog.save.success"));
-                    info.setHeaderText(null);
-                    info.showAndWait();
-                });
-            } catch (IOException ex) {
-                ex.printStackTrace();
-                Platform.runLater(() -> {
-                    Alert err = new Alert(Alert.AlertType.ERROR,
-                            rb().getString("dialog.save.error"));
-                    err.setHeaderText(null);
-                    err.showAndWait();
-                });
-            }
+            save();
         }
     }
 
     public void load() {
         if (currentFile == null) {
-            open();
             return;
         }
         try {
-            persistence.load(gameModel, currentFile);
-
+            GameController.getInstance().loadFrom(currentFile);
             GameController.getInstance().resetEndNotification(); // evita loop popup
             // aggiorna board/feedback, non il menu
             if (views != null) {
@@ -143,32 +121,7 @@ public class MenuController {
         File file = chooser.showOpenDialog(null);
         if (file != null) {
             currentFile = file.toPath();
-            try {
-                persistence.load(gameModel, currentFile);
-
-                GameController.getInstance().resetEndNotification();
-                if (views != null) {
-                    views.stream()
-                            .filter(v -> !(v instanceof MenuBarViewFxml))
-                            .forEach(DataView::update);
-                }
-                MenuBarViewFxml.getInstance().enableSaveOptions();
-
-                Platform.runLater(() -> {
-                    Alert info = new Alert(Alert.AlertType.INFORMATION,
-                            rb().getString("dialog.load.success"));
-                    info.setHeaderText(null);
-                    info.showAndWait();
-                });
-            } catch (IOException ex) {
-                ex.printStackTrace();
-                Platform.runLater(() -> {
-                    Alert err = new Alert(Alert.AlertType.ERROR,
-                            rb().getString("dialog.load.error"));
-                    err.setHeaderText(null);
-                    err.showAndWait();
-                });
-            }
+            load();
         }
     }
 
@@ -190,5 +143,9 @@ public class MenuController {
             a.setContentText(rb().getString("about.content"));
             a.showAndWait();
         });
+
+    }
+    public void exit() {
+        Platform.exit();
     }
 }
