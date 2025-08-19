@@ -47,7 +47,11 @@ public class GameController implements EventHandler {
 
     public void initialize(List<DataView> views) {
         this.views = views;
+        MenuController.getInstance().initialize(views);
         // save e save as restano disabilitate fino a newGame() o open()
+    }
+    public void resetEndNotification() {
+        this.gameEndNotified = false;
     }
 
     private ResourceBundle rb() {
@@ -83,153 +87,22 @@ public class GameController implements EventHandler {
     }
 
     @Override
-    public void save() {
-        if (currentFile == null) {
-            saveAs();
-            return;
-        }
-        try {
-            persistence.save(gameModel, currentFile);
-            Platform.runLater(() -> {
-                Alert info = new Alert(AlertType.INFORMATION,
-                        rb().getString("dialog.save.success"));
-                info.setHeaderText(null);
-                info.showAndWait();
-            });
-        } catch (IOException e) {
-            e.printStackTrace();
-            Platform.runLater(() -> {
-                Alert err = new Alert(AlertType.ERROR,
-                        rb().getString("dialog.save.error"));
-                err.setHeaderText(null);
-                err.showAndWait();
-            });
-        }
-    }
+    public void save() { MenuController.getInstance().save(); }
 
-    public void saveAs() {
-        FileChooser chooser = new FileChooser();
-        chooser.setTitle(rb().getString("menu.file.saveas"));
-        chooser.getExtensionFilters().add(
-                new FileChooser.ExtensionFilter("JSON Files", "*.json")
-        );
-        File file = chooser.showSaveDialog(null);
-        if (file != null) {
-            currentFile = file.toPath();
-            try {
-                persistence.save(gameModel, currentFile);
-               // views.forEach(DataView::update);
-                Platform.runLater(() -> {
-                    Alert info = new Alert(AlertType.INFORMATION,
-                            rb().getString("dialog.save.success"));
-                    info.setHeaderText(null);
-                    info.showAndWait();
-                });
-            } catch (IOException ex) {
-                ex.printStackTrace();
-                Platform.runLater(() -> {
-                    Alert err = new Alert(AlertType.ERROR,
-                            rb().getString("dialog.save.error"));
-                    err.setHeaderText(null);
-                    err.showAndWait();
-                });
-            }
-        }
-    }
+    public void saveAs() { MenuController.getInstance().saveAs(); }
 
     @Override
-    public void load() {
-        if (currentFile == null) {
-            open();
-            return;
-        }
-        try {
-            persistence.load(gameModel, currentFile);
+    public void load() { MenuController.getInstance().load(); }
 
-            gameEndNotified = false;
-            // aggiorna board e feedback bar, non il menu
-            views.stream()
-                    .filter(v -> !(v instanceof MenuBarViewFxml))
-                    .forEach(DataView::update);
+    public void open() { MenuController.getInstance().open(); }
 
-            MenuBarViewFxml.getInstance().enableSaveOptions();
-
-            Platform.runLater(() -> {
-                Alert info = new Alert(AlertType.INFORMATION,
-                        rb().getString("dialog.load.success"));
-                info.setHeaderText(null);
-                info.showAndWait();
-            });
-        } catch (IOException ex) {
-            ex.printStackTrace();
-            Platform.runLater(() -> {
-                Alert err = new Alert(AlertType.ERROR,
-                        rb().getString("dialog.load.error"));
-                err.setHeaderText(null);
-                err.showAndWait();
-            });
-        }
-    }
-
-    public void open() {
-        FileChooser chooser = new FileChooser();
-        chooser.setTitle(rb().getString("menu.file.open"));
-        chooser.getExtensionFilters().add(
-                new FileChooser.ExtensionFilter("JSON Files", "*.json")
-        );
-        File file = chooser.showOpenDialog(null);
-        if (file != null) {
-            currentFile = file.toPath();
-            try {
-                persistence.load(gameModel, currentFile);
-
-                gameEndNotified = false;
-                // aggiorna board e feedback bar, non il menu
-                views.stream()
-                        .filter(v -> !(v instanceof MenuBarViewFxml))
-                        .forEach(DataView::update);
-
-                MenuBarViewFxml.getInstance().enableSaveOptions();
-
-                Platform.runLater(() -> {
-                    Alert info = new Alert(AlertType.INFORMATION,
-                            rb().getString("dialog.load.success"));
-                    info.setHeaderText(null);
-                    info.showAndWait();
-                });
-            } catch (IOException ex) {
-                ex.printStackTrace();
-                Platform.runLater(() -> {
-                    Alert err = new Alert(AlertType.ERROR,
-                            rb().getString("dialog.load.error"));
-                    err.setHeaderText(null);
-                    err.showAndWait();
-                });
-            }
-        }
-    }
 
     @Override
-    public void help() {
-        Platform.runLater(() -> {
-            Alert a = new Alert(AlertType.INFORMATION);
-            a.setTitle(rb().getString("help.title"));
-            a.setHeaderText(rb().getString("help.header"));
-            a.setContentText(rb().getString("help.content"));
-            a.showAndWait();
-        });
-    }
+    public void help() { MenuController.getInstance().help(); }
+
 
     @Override
-    public void about() {
-        Platform.runLater(() -> {
-            Alert a = new Alert(AlertType.INFORMATION);
-            a.setTitle(rb().getString("about.title"));
-            a.setHeaderText(rb().getString("about.header"));
-            a.setContentText(rb().getString("about.content"));
-            a.showAndWait();
-        });
-    }
+    public void about() { MenuController.getInstance().about(); }
 
     @Override
     public void win() {
