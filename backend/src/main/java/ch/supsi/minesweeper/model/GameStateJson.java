@@ -45,8 +45,6 @@ public class GameStateJson {
         }
     }
 
-    public int getRows()             { return rows; }
-    public int getCols()             { return cols; }
     public int getMines()            { return mines; }
     public boolean[][] getHasMine()  { return hasMine; }
     public boolean[][] getRevealed() { return revealed; }

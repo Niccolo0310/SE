@@ -1,16 +1,15 @@
 package ch.supsi.minesweeper.controller;
 
+import ch.supsi.minesweeper.application.Services;
 import ch.supsi.minesweeper.model.GameModel;
-import ch.supsi.minesweeper.infrastructure.JsonGameRepository;
-import ch.supsi.minesweeper.persistence.GameRepository;
+import ch.supsi.minesweeper.application.GameService;
 import ch.supsi.minesweeper.view.DataView;
 import ch.supsi.minesweeper.view.MenuBarViewFxml;
 import ch.supsi.minesweeper.util.AppPreferences;
 import javafx.application.Platform;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
-import javafx.stage.FileChooser;
-import java.io.File;
+
 import java.io.IOException;
 import java.nio.file.Path;
 import java.text.MessageFormat;
@@ -21,8 +20,10 @@ import java.util.ResourceBundle;
 public class GameController implements EventHandler {
 
     private static GameController myself;
-    private final GameModel        gameModel;
-    private final GameRepository persistence;
+
+    private final GameModel gameModel;     // usato dalle view
+    private final GameService service;         // Nuovo strato applicativo
+
     private       List<DataView>    views;
     private final int               defaultBombs;
     private final ResourceBundle    bundle;
@@ -32,8 +33,10 @@ public class GameController implements EventHandler {
     private Path currentFile = null;
 
     private GameController() {
-        this.gameModel    = GameModel.getInstance();
-        this.persistence  = new JsonGameRepository();
+        // Costruisco il service con il repository concreto dal backend
+        this.service     = Services.defaultService();
+        this.gameModel      = service.model(); // reference per le view
+
         this.defaultBombs = AppPreferences.getBombs();
         this.bundle       = ResourceBundle.getBundle(
                 "i18n.messages",
@@ -55,13 +58,12 @@ public class GameController implements EventHandler {
     }
     // salva sul path passato
     public void saveTo(Path path) throws IOException {
-        persistence.save(gameModel, path);
+        service.save(path); // usa il service
     }
     // carica dal path passato
     public void loadFrom(Path path) throws IOException {
-        persistence.load(gameModel, path);
+        service.load(path);
     }
-
 
     private ResourceBundle rb() {
         return bundle;
@@ -74,17 +76,15 @@ public class GameController implements EventHandler {
             int max   = gameModel.getRows() * gameModel.getCols() - 1;
             int bombs = Math.max(1, Math.min(defaultBombs, max));
 
-            gameModel.setMines(bombs);
-            gameModel.newGame();
+            service.newGame(bombs); //ora coordina il service
 
-// aggiorna solo board e feedback bar
+            // aggiorna solo board e feedback bar
             views.stream()
                     .filter(v -> !(v instanceof MenuBarViewFxml))
                     .forEach(DataView::update);
 
             // riabilita Save e Save As su nuova partita
             MenuBarViewFxml.getInstance().enableSaveOptions();
-
 
             Alert info = new Alert(AlertType.INFORMATION);
             info.setTitle(rb().getString("dialog.new.title"));
@@ -105,10 +105,8 @@ public class GameController implements EventHandler {
 
     public void open() { MenuController.getInstance().open(); }
 
-
     @Override
     public void help() { MenuController.getInstance().help(); }
-
 
     @Override
     public void about() { MenuController.getInstance().about(); }
