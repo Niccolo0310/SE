@@ -30,7 +30,9 @@ public class GameController implements EventHandler {
     // mostra win/lose una sola volta per partita
     private volatile boolean gameEndNotified = false;
 
-    private Path currentFile = null;
+    public GameService getService() {
+        return service;
+    }
 
     private GameController() {
         // Costruisco il service con il repository concreto dal backend
@@ -145,4 +147,5 @@ public class GameController implements EventHandler {
     public void move() {
         gameModel.move();
     }
+
 }

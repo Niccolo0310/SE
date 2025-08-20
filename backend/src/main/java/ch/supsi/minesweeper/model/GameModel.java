@@ -28,12 +28,6 @@ public class GameModel extends AbstractModel
         return myself;
     }
 
-    // metodo pubblico “alto livello” per la persistenza
-    public void restore(GameStateJson state) {
-        loadFromState(state);  // questi due possono restare package-private
-        markStarted();
-    }
-
 
     public int getRows()     { return rows; }
     public int getCols()     { return cols; }
@@ -77,9 +71,6 @@ public class GameModel extends AbstractModel
         started = true;
     }
 
-    public void reset() {
-        started = false;
-    }
 
     private void generateField() {
         // reset
@@ -152,17 +143,6 @@ public class GameModel extends AbstractModel
         return opened;
     }
 
-    public int revealCell(int r, int c) {
-        if (revealed[r][c]) {
-            return neighborCount[r][c];
-        }
-        revealed[r][c] = true;
-        if (hasMine[r][c]) {
-            return -1;
-        }
-        revealedCount++;
-        return neighborCount[r][c];
-    }
 
     public void toggleFlag(int r, int c) {
         if (!revealed[r][c]) {
@@ -253,5 +233,36 @@ public class GameModel extends AbstractModel
 
     @Override
     public void lose() {
+    }
+
+    public GameActionResult handleClick(int r, int c, boolean rightClick) {
+        //se la partita non è iniziata, non fare nulla
+        if (!isStarted()) {
+            return GameActionResult.none();
+        }
+
+        if (rightClick) {
+            // click destro toglie bandiera
+            if (!isRevealed(r, c)) {
+                toggleFlag(r, c);
+                return GameActionResult.flag();
+            } else {
+                return GameActionResult.none();
+            }
+        }
+
+        // click sinistro se ce' bandiera, non aprire
+        if (isFlagged(r, c)) {
+            return GameActionResult.none();
+        }
+
+        //apri area secondo la logica esistente
+        List<int[]> opened = revealArea(r, c);
+
+        //stato finale da comunicare alla UI
+        boolean mineHit = hasMineAt(r, c);  // se la cella cliccata era bomba
+        boolean win     = isWin();          // controlla vittoria
+
+        return GameActionResult.reveal(opened, mineHit, win);
     }
 }

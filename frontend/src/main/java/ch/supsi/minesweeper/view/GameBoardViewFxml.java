@@ -1,10 +1,8 @@
 package ch.supsi.minesweeper.view;
 
+import ch.supsi.minesweeper.application.GameService;
 import ch.supsi.minesweeper.controller.EventHandler;
-import ch.supsi.minesweeper.model.AbstractModel;
-import ch.supsi.minesweeper.model.GameEventHandler;
-import ch.supsi.minesweeper.model.GameModel;
-import ch.supsi.minesweeper.model.PlayerEventHandler;
+import ch.supsi.minesweeper.model.*;
 import javafx.animation.AnimationTimer;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -30,6 +28,7 @@ public class GameBoardViewFxml implements ControlledFxView {
     private PlayerEventHandler playerEventHandler;
     private GameEventHandler   gameEventHandler;
     private GameModel          gameModel;
+    private GameService gameService;
 
     @FXML private GridPane containerPane;
     private Image flagImg, bombImg;
@@ -40,6 +39,10 @@ public class GameBoardViewFxml implements ControlledFxView {
     private GameBoardViewFxml(ResourceBundle bundle) {
         this.bundle = bundle;
         loadImages();
+    }
+
+    public void setGameService(GameService gameService) {
+        this.gameService = gameService;
     }
 
     public static GameBoardViewFxml getInstance(ResourceBundle bundle) {
@@ -113,33 +116,38 @@ public class GameBoardViewFxml implements ControlledFxView {
 
     private void handleClick(MouseEvent e, int r, int c, Button btn) {
         if (!gameModel.isStarted()) return;
-
-        if (e.getButton() == MouseButton.SECONDARY) {
-            gameModel.toggleFlag(r, c);
-            if (gameModel.isFlagged(r, c)) {
-                btn.setGraphic(makeIcon(flagImg));
-                btn.setText("");
-            } else {
-                btn.setGraphic(null);
+        boolean rightClick = (e.getButton() == MouseButton.SECONDARY);
+        GameActionResult result = gameService.handleClick(r, c, rightClick); //service gestisce azioni dell'utente
+        switch (result.getType()) {
+            case FLAG -> {
+                // Aggiorna solo la cella flaggata/unflaggata
+                if (gameModel.isFlagged(r, c)) {
+                    btn.setGraphic(makeIcon(flagImg));
+                    btn.setText("");
+                } else {
+                    btn.setGraphic(null);
+                }
+                UserFeedbackViewFxml.getInstance().update();
             }
-            UserFeedbackViewFxml.getInstance().update();
-        }
-        else if (e.getButton() == MouseButton.PRIMARY && !gameModel.isFlagged(r, c)) {
-            List<int[]> opened = gameModel.revealArea(r, c);
-            revealQueue.addAll(opened);
+            case REVEAL -> {
+                // le celle vanno aggiornate progressivamente
+                revealQueue.addAll(result.getOpened());
 
-            // controllo immediato
-            if (gameModel.hasMineAt(r, c)) {
-                disableAll();
-                gameEventHandler.lose();
+                // controllo esito
+                if (result.isMineHit()) {
+                    disableAll();
+                    gameEventHandler.lose();
+                } else if (result.isWin()) {
+                    disableAll();
+                    gameEventHandler.win();
+                }
             }
+            case NONE -> {  }
         }
-        else if (e.getButton() == MouseButton.PRIMARY && !gameModel.isFlagged(r, c)) {
-            List<int[]> opened = gameModel.revealArea(r, c);
-            revealQueue.addAll(opened); // le celle vanno aggiornate progressivamente
-        }
+
         e.consume();
     }
+
 
     // Disegna singola cella (bomba, numero, vuoto)
     private void drawCell(Button b, int row, int col) {
@@ -205,7 +213,7 @@ public class GameBoardViewFxml implements ControlledFxView {
                     drawCell(b, row, col);
                 }
 
-                // check win/lose alla fine di ogni batch
+                // check win/lose alla fine
                 if (gameModel.isWin()) {
                     disableAll();
                     gameEventHandler.win();

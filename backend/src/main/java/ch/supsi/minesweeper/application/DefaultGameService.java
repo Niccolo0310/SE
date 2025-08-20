@@ -30,33 +30,8 @@ public class DefaultGameService implements GameService {
 
     @Override
     public GameActionResult handleClick(int row, int col, boolean rightClick) {
-        // se la partita non è iniziata non fare nulla
-        if (!model.isStarted()) {
-            return GameActionResult.none();
-        }
-
-        // Click destro: toggle bandiera (solo se non rivelata)
-        if (rightClick) {
-            if (!model.isRevealed(row, col)) {
-                model.toggleFlag(row, col);
-                return GameActionResult.flag();
-            } else {
-                return GameActionResult.none();
-            }
-        }
-
-        // Click sinistro: se è flaggata, non aprire
-        if (model.isFlagged(row, col)) {
-            return GameActionResult.none();
-        }
-
-        // Apri area (BFS già nel model). La lista include la cella cliccata.
-        var opened = model.revealArea(row, col);
-
-        boolean mineHit = model.hasMineAt(row, col);
-        boolean win     = !mineHit && model.isWin();
-
-        return GameActionResult.reveal(opened, mineHit, win);
+        // Delego tutta la logica al dominio (no UI qui)
+        return model.handleClick(row, col, rightClick);
     }
 
     @Override

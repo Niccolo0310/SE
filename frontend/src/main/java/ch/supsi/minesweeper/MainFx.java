@@ -29,7 +29,6 @@ public class MainFx extends Application {
 
     public MainFx() {
 
-
         Locale locale = Locale.forLanguageTag(AppPreferences.getLang());
         bundle = ResourceBundle.getBundle(BUNDLE_BASE, locale);
 
@@ -40,6 +39,8 @@ public class MainFx extends Application {
         feedbackView   = UserFeedbackViewFxml.getInstance(bundle);
 
         GameController controller = GameController.getInstance();
+
+        ((GameBoardViewFxml) gameBoardView).setGameService(controller.getService()); // passo il GameService della stessa istanza usata dal controller
 
         menuBarView.initialize((EventHandler) controller, model);
         gameBoardView.initialize((EventHandler) controller, model);
