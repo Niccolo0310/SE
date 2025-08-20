@@ -137,13 +137,20 @@ public class MenuController {
 
     public void about() {
         Platform.runLater(() -> {
+            String name        = rb().getString("about.name");
+            String version     = rb().getString("about.version");
+            String description = rb().getString("about.description");
+            String copyright   = rb().getString("about.copyright");
+
+            String header = java.text.MessageFormat.format(
+                    rb().getString("about.header"), name, version
+            );
+
             Alert a = new Alert(Alert.AlertType.INFORMATION);
-            a.setTitle(rb().getString("about.title"));
-            a.setHeaderText(rb().getString("about.header"));
-            a.setContentText(rb().getString("about.content"));
+            a.setHeaderText(header);
+            a.setContentText(description + "\n" + copyright);
             a.showAndWait();
         });
-
     }
     public void exit() {
         Platform.exit();
