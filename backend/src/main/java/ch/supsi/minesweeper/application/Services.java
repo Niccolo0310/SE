@@ -11,7 +11,7 @@ public final class Services {
     public static synchronized GameService defaultService() {
         if (DEFAULT == null) {
             DEFAULT = new DefaultGameService(
-                    GameModel.getInstance(),
+                    new GameModel(),
                     new JsonGameRepository()
             );
         }

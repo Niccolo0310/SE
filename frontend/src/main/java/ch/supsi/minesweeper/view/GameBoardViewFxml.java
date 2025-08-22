@@ -2,6 +2,7 @@ package ch.supsi.minesweeper.view;
 
 import ch.supsi.minesweeper.application.GameService;
 import ch.supsi.minesweeper.controller.EventHandler;
+import ch.supsi.minesweeper.controller.GameController;
 import ch.supsi.minesweeper.model.*;
 import javafx.animation.AnimationTimer;
 import javafx.fxml.FXML;
@@ -25,10 +26,8 @@ public class GameBoardViewFxml implements ControlledFxView {
     private static final double BUTTON_SIZE = 37;
     private static final double IMAGE_SIZE  = 30;
 
-    private PlayerEventHandler playerEventHandler;
-    private GameEventHandler   gameEventHandler;
     private GameModel          gameModel;
-    private GameService gameService;
+    private GameController controller;
 
     @FXML private GridPane containerPane;
     private Image flagImg, bombImg;
@@ -41,9 +40,6 @@ public class GameBoardViewFxml implements ControlledFxView {
         loadImages();
     }
 
-    public void setGameService(GameService gameService) {
-        this.gameService = gameService;
-    }
 
     public static GameBoardViewFxml getInstance(ResourceBundle bundle) {
         if (myself == null) {
@@ -62,11 +58,9 @@ public class GameBoardViewFxml implements ControlledFxView {
 
     @Override
     public void initialize(EventHandler evt, AbstractModel model) {
-        playerEventHandler = (PlayerEventHandler) evt;
-        gameEventHandler   = (GameEventHandler)   evt;
-        gameModel          = (GameModel) model;
+        this.controller = (GameController) evt;
+        this.gameModel  = (GameModel) model;
         setupGrid();
-
         // Avvia animazione progressiva per il reveal
         startRevealAnimator();
     }
@@ -115,36 +109,8 @@ public class GameBoardViewFxml implements ControlledFxView {
     }
 
     private void handleClick(MouseEvent e, int r, int c, Button btn) {
-        if (!gameModel.isStarted()) return;
-        boolean rightClick = (e.getButton() == MouseButton.SECONDARY);
-        GameActionResult result = gameService.handleClick(r, c, rightClick); //service gestisce azioni dell'utente
-        switch (result.getType()) {
-            case FLAG -> {
-                // Aggiorna solo la cella flaggata/unflaggata
-                if (gameModel.isFlagged(r, c)) {
-                    btn.setGraphic(makeIcon(flagImg));
-                    btn.setText("");
-                } else {
-                    btn.setGraphic(null);
-                }
-                UserFeedbackViewFxml.getInstance().update();
-            }
-            case REVEAL -> {
-                // le celle vanno aggiornate progressivamente
-                revealQueue.addAll(result.getOpened());
-
-                // controllo esito
-                if (result.isMineHit()) {
-                    disableAll();
-                    gameEventHandler.lose();
-                } else if (result.isWin()) {
-                    disableAll();
-                    gameEventHandler.win();
-                }
-            }
-            case NONE -> {  }
-        }
-
+        boolean right = (e.getButton() == MouseButton.SECONDARY);
+        controller.onCellClick(r, c, right, btn, revealQueue);
         e.consume();
     }
 
@@ -162,16 +128,19 @@ public class GameBoardViewFxml implements ControlledFxView {
         b.setDisable(true);
     }
 
-    private void disableAll() {
+    public void disableAll() {
         for (Node n : containerPane.getChildren()) {
-            Button b = (Button) n;
-            int rr = Optional.ofNullable(GridPane.getRowIndex(b)).orElse(0);
-            int cc = Optional.ofNullable(GridPane.getColumnIndex(b)).orElse(0);
-            if (gameModel.hasMineAt(rr, cc)) {
-                b.setGraphic(makeIcon(bombImg));
-                b.setText("");
-            }
-            b.setDisable(true);
+            (n).setDisable(true);
+        }
+    }
+
+    public void applyFlagGraphic(Button btn, boolean flagged) {
+        if (flagged) {
+            btn.setGraphic(makeIcon(flagImg));
+            btn.setText("");
+        } else {
+            btn.setGraphic(null);
+            btn.setText("");
         }
     }
 
@@ -214,12 +183,31 @@ public class GameBoardViewFxml implements ControlledFxView {
                 }
 
                 // check win/lose alla fine
-                if (gameModel.isWin()) {
+                if (gameModel.isWin() && controller != null) {
                     disableAll();
-                    gameEventHandler.win();
+                    controller.win();
                 }
             }
         };
         timer.start();
     }
+    public void revealAllMinesAndDisable() {
+        for (Node n : containerPane.getChildren()) {
+            Button b = (Button) n;
+            int r = Optional.ofNullable(GridPane.getRowIndex(b)).orElse(0);
+            int c = Optional.ofNullable(GridPane.getColumnIndex(b)).orElse(0);
+
+            if (gameModel.hasMineAt(r, c)) {
+                b.setGraphic(makeIcon(bombImg));
+                b.setText("");
+            } else if (gameModel.isRevealed(r, c)) {
+                drawCell(b, r, c); // già mette numero o vuoto
+            } else {
+                b.setGraphic(null);
+                b.setText("");
+            }
+            b.setDisable(true);
+        }
+    }
+
 }

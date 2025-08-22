@@ -6,23 +6,26 @@ import ch.supsi.minesweeper.application.GameService;
 import ch.supsi.minesweeper.view.DataView;
 import ch.supsi.minesweeper.view.MenuBarViewFxml;
 import ch.supsi.minesweeper.util.AppPreferences;
+import ch.supsi.minesweeper.view.UserFeedbackViewFxml;
 import javafx.application.Platform;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
+import javafx.scene.control.Button;
+import ch.supsi.minesweeper.view.GameBoardViewFxml;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.text.MessageFormat;
 import java.util.List;
 import java.util.Locale;
+import java.util.Queue;
 import java.util.ResourceBundle;
 
 public class GameController implements EventHandler {
 
     private static GameController myself;
-
     private final GameModel gameModel;     // usato dalle view
-    private final GameService service;         // Nuovo strato applicativo
+    private final GameService service;     // Nuovo strato applicativo
 
     private       List<DataView>    views;
     private final int               defaultBombs;
@@ -30,9 +33,8 @@ public class GameController implements EventHandler {
     // mostra win/lose una sola volta per partita
     private volatile boolean gameEndNotified = false;
 
-    public GameService getService() {
-        return service;
-    }
+    private GameBoardViewFxml boardView;
+
 
     private GameController() {
         // Costruisco il service con il repository concreto dal backend
@@ -54,6 +56,17 @@ public class GameController implements EventHandler {
         this.views = views;
         MenuController.getInstance().initialize(views);
         // save e save as restano disabilitate fino a newGame() o open()
+
+        // cattura la board view
+        for (DataView v : views) {
+            if (v instanceof GameBoardViewFxml gv) {
+                this.boardView = gv;
+                break;
+            }
+        }if (this.boardView == null){
+            throw new IllegalStateException("GameBoardView non trovata nelle views");
+        }
+
     }
     public void resetEndNotification() {
         this.gameEndNotified = false;
@@ -95,6 +108,31 @@ public class GameController implements EventHandler {
                     MessageFormat.format(rb().getString("dialog.new.body"), bombs));
             info.showAndWait();
         });
+    }
+    public void onCellClick(int r, int c, boolean rightClick,
+                            Button btn, Queue<int[]> revealQueue) {
+
+        if (!gameModel.isStarted()) return;
+        var result = service.handleClick(r, c, rightClick);
+
+        switch (result.getType()) {
+            case FLAG -> {
+                // delega alla view l'icona
+                boardView.applyFlagGraphic(btn, gameModel.isFlagged(r, c));
+                UserFeedbackViewFxml.getInstance().update();
+            }
+            case REVEAL -> {
+                revealQueue.addAll(result.getOpened());
+                if (result.isMineHit()) {
+                    boardView.revealAllMinesAndDisable();
+                    lose();
+                } else if (result.isWin()) {
+                    boardView.revealAllMinesAndDisable();
+                    win();
+                }
+            }
+            case NONE -> {}
+        }
     }
 
     @Override
@@ -144,8 +182,11 @@ public class GameController implements EventHandler {
     }
 
     @Override
-    public void move() {
-        gameModel.move();
-    }
+    public void move() {}
+
+    public GameModel model() { return gameModel; }
+
+
 
 }
+

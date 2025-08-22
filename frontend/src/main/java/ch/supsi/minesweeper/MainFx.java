@@ -1,6 +1,6 @@
 package ch.supsi.minesweeper;
 
-import ch.supsi.minesweeper.controller.EventHandler;
+import ch.supsi.minesweeper.application.GameService;
 import ch.supsi.minesweeper.controller.GameController;
 
 import ch.supsi.minesweeper.model.AbstractModel;
@@ -31,19 +31,16 @@ public class MainFx extends Application {
 
         Locale locale = Locale.forLanguageTag(AppPreferences.getLang());
         bundle = ResourceBundle.getBundle(BUNDLE_BASE, locale);
-
-        model          = GameModel.getInstance();
+        var controller = GameController.getInstance();
+        this.model  = controller.model();
 
         menuBarView    = MenuBarViewFxml.getInstance(bundle);
         gameBoardView  = GameBoardViewFxml.getInstance(bundle);
         feedbackView   = UserFeedbackViewFxml.getInstance(bundle);
+        controller.initialize(List.of(menuBarView, gameBoardView, feedbackView));
 
-        GameController controller = GameController.getInstance();
-
-        ((GameBoardViewFxml) gameBoardView).setGameService(controller.getService()); // passo il GameService della stessa istanza usata dal controller
-
-        menuBarView.initialize((EventHandler) controller, model);
-        gameBoardView.initialize((EventHandler) controller, model);
+        menuBarView.initialize(controller, model);
+        gameBoardView.initialize(controller, model);
         feedbackView.initialize(model);
 
         controller.initialize(List.of(menuBarView, gameBoardView, feedbackView));
