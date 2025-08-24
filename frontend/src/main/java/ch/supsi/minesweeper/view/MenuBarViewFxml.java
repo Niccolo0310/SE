@@ -2,7 +2,7 @@ package ch.supsi.minesweeper.view;
 
 import ch.supsi.minesweeper.controller.GameController;
 import ch.supsi.minesweeper.controller.EventHandler;
-import ch.supsi.minesweeper.model.GameEventHandler;
+import ch.supsi.minesweeper.controller.GameEventHandler;
 import ch.supsi.minesweeper.model.GameModel;
 import ch.supsi.minesweeper.util.AppPreferences;
 import ch.supsi.minesweeper.controller.MenuController;

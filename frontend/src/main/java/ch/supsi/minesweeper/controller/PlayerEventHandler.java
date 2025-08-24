@@ -1,4 +1,4 @@
-package ch.supsi.minesweeper.model;
+package ch.supsi.minesweeper.controller;
 
 
 public interface PlayerEventHandler {

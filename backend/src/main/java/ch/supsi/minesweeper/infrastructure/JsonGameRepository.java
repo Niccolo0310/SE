@@ -1,7 +1,6 @@
 package ch.supsi.minesweeper.infrastructure;
 
 import ch.supsi.minesweeper.model.GameModel;
-import ch.supsi.minesweeper.model.GameStateJson;
 import ch.supsi.minesweeper.persistence.GameRepository;
 import ch.supsi.minesweeper.persistence.GameState;
 import com.fasterxml.jackson.databind.ObjectMapper;

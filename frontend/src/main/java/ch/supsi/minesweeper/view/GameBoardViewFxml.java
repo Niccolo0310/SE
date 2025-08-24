@@ -1,6 +1,5 @@
 package ch.supsi.minesweeper.view;
 
-import ch.supsi.minesweeper.application.GameService;
 import ch.supsi.minesweeper.controller.EventHandler;
 import ch.supsi.minesweeper.controller.GameController;
 import ch.supsi.minesweeper.model.*;
