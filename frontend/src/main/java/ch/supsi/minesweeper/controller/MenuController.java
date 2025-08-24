@@ -1,6 +1,7 @@
 package ch.supsi.minesweeper.controller;
 
 import ch.supsi.minesweeper.util.AppPreferences;
+import ch.supsi.minesweeper.util.BuildInfo;
 import ch.supsi.minesweeper.view.DataView;
 import ch.supsi.minesweeper.view.MenuBarViewFxml;
 import javafx.application.Platform;
@@ -137,18 +138,12 @@ public class MenuController {
 
     public void about() {
         Platform.runLater(() -> {
-            String name        = rb().getString("about.name");
-            String version     = rb().getString("about.version");
-            String description = rb().getString("about.description");
-            String copyright   = rb().getString("about.copyright");
-
-            String header = java.text.MessageFormat.format(
-                    rb().getString("about.header"), name, version
-            );
-
             Alert a = new Alert(Alert.AlertType.INFORMATION);
-            a.setHeaderText(header);
-            a.setContentText(description + "\n" + copyright);
+            a.setTitle("About " + BuildInfo.getName());
+            a.setHeaderText(BuildInfo.getName() + "\nAutori: " + BuildInfo.getAuthor() + "    Versione: " + BuildInfo.getVersion());
+            a.setContentText(BuildInfo.getDescription()  +
+                    "\nBuild info: " + BuildInfo.buildDate()
+            );
             a.showAndWait();
         });
     }

@@ -22,7 +22,7 @@ import java.net.URL;
 import java.util.Locale;
 import java.util.ResourceBundle;
 
-public class MenuBarViewFxml implements ControlledFxView {
+public class MenuBarViewFxml implements ControlledFxView, UiNotices {
 
     @FXML private MenuBar  menuBar;
     @FXML private MenuItem newMenuItem;
@@ -181,6 +181,33 @@ public class MenuBarViewFxml implements ControlledFxView {
     public void enableSaveOptions() {
         saveMenuItem.setDisable(false);
         saveAsMenuItem.setDisable(false);
+    }
+
+    @Override
+    public void showNewGameInfo(int bombs) {
+        var info = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.INFORMATION);
+        info.setTitle(bundle.getString("dialog.new.title"));
+        info.setHeaderText(null);
+        info.setContentText(java.text.MessageFormat.format(bundle.getString("dialog.new.body"), bombs));
+        info.showAndWait();
+    }
+
+    @Override
+    public void showWin() {
+        var a = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.INFORMATION);
+        a.setTitle(bundle.getString("alert.win.title"));
+        a.setHeaderText(null);
+        a.setContentText(bundle.getString("alert.win.text"));
+        a.showAndWait();
+    }
+
+    @Override
+    public void showLose() {
+        var a = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.ERROR);
+        a.setTitle(bundle.getString("alert.lose.title"));
+        a.setHeaderText(bundle.getString("alert.lose.header"));
+        a.setContentText(bundle.getString("alert.lose.text"));
+        a.showAndWait();
     }
 
     @FXML

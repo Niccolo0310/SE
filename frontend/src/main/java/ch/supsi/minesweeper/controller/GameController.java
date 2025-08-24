@@ -3,15 +3,12 @@ package ch.supsi.minesweeper.controller;
 import ch.supsi.minesweeper.application.Services;
 import ch.supsi.minesweeper.model.GameModel;
 import ch.supsi.minesweeper.application.GameService;
-import ch.supsi.minesweeper.view.DataView;
-import ch.supsi.minesweeper.view.MenuBarViewFxml;
+import ch.supsi.minesweeper.view.*;
 import ch.supsi.minesweeper.util.AppPreferences;
-import ch.supsi.minesweeper.view.UserFeedbackViewFxml;
 import javafx.application.Platform;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
-import ch.supsi.minesweeper.view.GameBoardViewFxml;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -34,6 +31,7 @@ public class GameController implements EventHandler {
     private volatile boolean gameEndNotified = false;
 
     private GameBoardViewFxml boardView;
+    private UiNotices uiNotices;
 
 
     private GameController() {
@@ -59,12 +57,13 @@ public class GameController implements EventHandler {
 
         // cattura la board view
         for (DataView v : views) {
-            if (v instanceof GameBoardViewFxml gv) {
-                this.boardView = gv;
-                break;
-            }
+            if (v instanceof GameBoardViewFxml gv) this.boardView = gv;
+            if (v instanceof UiNotices uiv) this.uiNotices = uiv;
         }if (this.boardView == null){
             throw new IllegalStateException("GameBoardView non trovata nelle views");
+        }
+        if (this.uiNotices == null){
+            throw new IllegalStateException("UiNotices non disponibile");
         }
 
     }
@@ -101,12 +100,7 @@ public class GameController implements EventHandler {
             // riabilita Save e Save As su nuova partita
             MenuBarViewFxml.getInstance().enableSaveOptions();
 
-            Alert info = new Alert(AlertType.INFORMATION);
-            info.setTitle(rb().getString("dialog.new.title"));
-            info.setHeaderText(null);
-            info.setContentText(
-                    MessageFormat.format(rb().getString("dialog.new.body"), bombs));
-            info.showAndWait();
+            uiNotices.showNewGameInfo(bombs);
         });
     }
     public void onCellClick(int r, int c, boolean rightClick,
@@ -156,13 +150,8 @@ public class GameController implements EventHandler {
         if (gameEndNotified) return;   //evita loop di popup
         gameEndNotified = true;
         Platform.runLater(() -> {
-            // disabilita Save e Save As quando si vince
             MenuBarViewFxml.getInstance().disableSaveOptions();
-            Alert a = new Alert(AlertType.INFORMATION);
-            a.setTitle(rb().getString("alert.win.title"));
-            a.setHeaderText(null);
-            a.setContentText(rb().getString("alert.win.text"));
-            a.showAndWait();
+            uiNotices.showWin();                  // <--- qui
         });
     }
 
@@ -171,13 +160,8 @@ public class GameController implements EventHandler {
         if (gameEndNotified) return;   //evita loop di popup
         gameEndNotified = true;
         Platform.runLater(() -> {
-            // disabilita Save e Save As quando si perde
             MenuBarViewFxml.getInstance().disableSaveOptions();
-            Alert a = new Alert(AlertType.ERROR);
-            a.setTitle(rb().getString("alert.lose.title"));
-            a.setHeaderText(rb().getString("alert.lose.header"));
-            a.setContentText(rb().getString("alert.lose.text"));
-            a.showAndWait();
+            uiNotices.showLose();                 // <--- e qui
         });
     }
 
