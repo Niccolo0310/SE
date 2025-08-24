@@ -1,10 +1,10 @@
 package ch.supsi.minesweeper.view;
 
+import ch.supsi.minesweeper.application.PreferenceService;
 import ch.supsi.minesweeper.controller.GameController;
 import ch.supsi.minesweeper.controller.EventHandler;
 import ch.supsi.minesweeper.controller.GameEventHandler;
 import ch.supsi.minesweeper.model.GameModel;
-import ch.supsi.minesweeper.util.AppPreferences;
 import ch.supsi.minesweeper.controller.MenuController;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
@@ -22,7 +22,7 @@ import java.net.URL;
 import java.util.Locale;
 import java.util.ResourceBundle;
 
-public class MenuBarViewFxml implements ControlledFxView, UiNotices {
+public class MenuBarViewFxml implements ControlledFxView {
 
     @FXML private MenuBar  menuBar;
     @FXML private MenuItem newMenuItem;
@@ -43,7 +43,7 @@ public class MenuBarViewFxml implements ControlledFxView, UiNotices {
     public MenuBarViewFxml() {
         this.bundle = ResourceBundle.getBundle(
                 "i18n.messages",
-                Locale.forLanguageTag(AppPreferences.getLang())
+                Locale.forLanguageTag(PreferenceService.get().getLang())
         );
     }
     public static MenuBarViewFxml getInstance(ResourceBundle bundle) {
@@ -63,7 +63,7 @@ public class MenuBarViewFxml implements ControlledFxView, UiNotices {
     public static MenuBarViewFxml getInstance() {
         ResourceBundle def = ResourceBundle.getBundle(
                 "i18n.messages",
-                Locale.forLanguageTag(AppPreferences.getLang()));
+                Locale.forLanguageTag(PreferenceService.get().getLang()));
         return getInstance(def);
     }
 
@@ -130,8 +130,8 @@ public class MenuBarViewFxml implements ControlledFxView, UiNotices {
     }
 
     private void showPreferencesDialog() {
-        int    currentBombs = AppPreferences.getBombs();
-        String currentLang  = AppPreferences.getLang();
+        int    currentBombs = PreferenceService.get().getBombs();
+        String currentLang  = PreferenceService.get().getLang();
         int maxBombs = gameModel.getRows() * gameModel.getCols() - 1;
 
         Dialog<ButtonType> dlg = new Dialog<>();
@@ -160,8 +160,8 @@ public class MenuBarViewFxml implements ControlledFxView, UiNotices {
                 int bombs = Integer.parseInt(bombsField.getText().trim());
                 if (bombs < 1 || bombs > maxBombs) throw new NumberFormatException();
 
-                AppPreferences.setBombs(bombs);
-                AppPreferences.setLang(langBox.getValue());
+                PreferenceService.get().setBombs(bombs);
+                PreferenceService.get().setLang(langBox.getValue());
 
                 new Alert(Alert.AlertType.INFORMATION,
                         bundle.getString("prefs.saved"))
@@ -183,32 +183,7 @@ public class MenuBarViewFxml implements ControlledFxView, UiNotices {
         saveAsMenuItem.setDisable(false);
     }
 
-    @Override
-    public void showNewGameInfo(int bombs) {
-        var info = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.INFORMATION);
-        info.setTitle(bundle.getString("dialog.new.title"));
-        info.setHeaderText(null);
-        info.setContentText(java.text.MessageFormat.format(bundle.getString("dialog.new.body"), bombs));
-        info.showAndWait();
-    }
 
-    @Override
-    public void showWin() {
-        var a = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.INFORMATION);
-        a.setTitle(bundle.getString("alert.win.title"));
-        a.setHeaderText(null);
-        a.setContentText(bundle.getString("alert.win.text"));
-        a.showAndWait();
-    }
-
-    @Override
-    public void showLose() {
-        var a = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.ERROR);
-        a.setTitle(bundle.getString("alert.lose.title"));
-        a.setHeaderText(bundle.getString("alert.lose.header"));
-        a.setContentText(bundle.getString("alert.lose.text"));
-        a.showAndWait();
-    }
 
     @FXML
     private void onNew() { MenuController.getInstance().newGame(); }

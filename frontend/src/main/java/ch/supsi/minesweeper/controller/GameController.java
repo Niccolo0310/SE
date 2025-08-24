@@ -1,18 +1,16 @@
 package ch.supsi.minesweeper.controller;
 
+import ch.supsi.minesweeper.application.PreferenceService;
 import ch.supsi.minesweeper.application.Services;
 import ch.supsi.minesweeper.model.GameModel;
 import ch.supsi.minesweeper.application.GameService;
 import ch.supsi.minesweeper.view.*;
-import ch.supsi.minesweeper.util.AppPreferences;
+
 import javafx.application.Platform;
-import javafx.scene.control.Alert;
-import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.text.MessageFormat;
 import java.util.List;
 import java.util.Locale;
 import java.util.Queue;
@@ -39,10 +37,10 @@ public class GameController implements EventHandler {
         this.service     = Services.defaultService();
         this.gameModel      = service.model(); // reference per le view
 
-        this.defaultBombs = AppPreferences.getBombs();
+        this.defaultBombs = PreferenceService.get().getBombs();
         this.bundle       = ResourceBundle.getBundle(
                 "i18n.messages",
-                Locale.forLanguageTag(AppPreferences.getLang()));
+                Locale.forLanguageTag(PreferenceService.get().getLang()));
     }
 
     public static GameController getInstance() {
@@ -58,13 +56,11 @@ public class GameController implements EventHandler {
         // cattura la board view
         for (DataView v : views) {
             if (v instanceof GameBoardViewFxml gv) this.boardView = gv;
-            if (v instanceof UiNotices uiv) this.uiNotices = uiv;
         }if (this.boardView == null){
             throw new IllegalStateException("GameBoardView non trovata nelle views");
         }
-        if (this.uiNotices == null){
-            throw new IllegalStateException("UiNotices non disponibile");
-        }
+
+        this.uiNotices = ch.supsi.minesweeper.view.UiNotices.getInstance();
 
     }
     public void resetEndNotification() {
@@ -151,7 +147,7 @@ public class GameController implements EventHandler {
         gameEndNotified = true;
         Platform.runLater(() -> {
             MenuBarViewFxml.getInstance().disableSaveOptions();
-            uiNotices.showWin();                  // <--- qui
+            uiNotices.showWin();
         });
     }
 
@@ -161,7 +157,7 @@ public class GameController implements EventHandler {
         gameEndNotified = true;
         Platform.runLater(() -> {
             MenuBarViewFxml.getInstance().disableSaveOptions();
-            uiNotices.showLose();                 // <--- e qui
+            uiNotices.showLose();
         });
     }
 

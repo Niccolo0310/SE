@@ -1,9 +1,10 @@
 package ch.supsi.minesweeper.controller;
 
-import ch.supsi.minesweeper.util.AppPreferences;
-import ch.supsi.minesweeper.util.BuildInfo;
+import ch.supsi.minesweeper.application.PreferenceService;
+
 import ch.supsi.minesweeper.view.DataView;
 import ch.supsi.minesweeper.view.MenuBarViewFxml;
+import ch.supsi.minesweeper.view.UiNotices;
 import javafx.application.Platform;
 import javafx.scene.control.Alert;
 import javafx.stage.FileChooser;
@@ -13,6 +14,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Locale;
+import java.util.MissingResourceException;
 import java.util.ResourceBundle;
 
 public class MenuController {
@@ -21,10 +23,11 @@ public class MenuController {
     private List<DataView> views;
     private final ResourceBundle bundle;
     private Path currentFile = null;
+    private final ResourceBundle aboutProps = ResourceBundle.getBundle("config");
 
     private MenuController() {
         this.bundle = ResourceBundle.getBundle("i18n.messages",
-                Locale.forLanguageTag(AppPreferences.getLang()));
+                Locale.forLanguageTag(PreferenceService.get().getLang()));
     }
 
     public static MenuController getInstance() {
@@ -32,7 +35,7 @@ public class MenuController {
         return myself;
     }
 
-    //viene Chiamata da GameController.initialize(...) per passare le view.
+    //viene Chiamata da GameController.initialize() per passare le view.
     public void initialize(List<DataView> views) {
         this.views = views;
     }
@@ -51,20 +54,10 @@ public class MenuController {
         }
         try {
             GameController.getInstance().saveTo(currentFile);
-            Platform.runLater(() -> {
-                Alert info = new Alert(Alert.AlertType.INFORMATION,
-                        rb().getString("dialog.save.success"));
-                info.setHeaderText(null);
-                info.showAndWait();
-            });
+            UiNotices.getInstance().showInfo(rb().getString("dialog.save.success"));
         } catch (IOException e) {
             e.printStackTrace();
-            Platform.runLater(() -> {
-                Alert err = new Alert(Alert.AlertType.ERROR,
-                        rb().getString("dialog.save.error"));
-                err.setHeaderText(null);
-                err.showAndWait();
-            });
+            UiNotices.getInstance().showError(rb().getString("dialog.save.error"));
         }
     }
 
@@ -96,20 +89,10 @@ public class MenuController {
             }
             MenuBarViewFxml.getInstance().enableSaveOptions();
 
-            Platform.runLater(() -> {
-                Alert info = new Alert(Alert.AlertType.INFORMATION,
-                        rb().getString("dialog.load.success"));
-                info.setHeaderText(null);
-                info.showAndWait();
-            });
+            UiNotices.getInstance().showInfo(rb().getString("dialog.load.success"));
         } catch (IOException ex) {
             ex.printStackTrace();
-            Platform.runLater(() -> {
-                Alert err = new Alert(Alert.AlertType.ERROR,
-                        rb().getString("dialog.load.error"));
-                err.setHeaderText(null);
-                err.showAndWait();
-            });
+            UiNotices.getInstance().showError(rb().getString("dialog.load.error"));
         }
     }
 
@@ -127,26 +110,30 @@ public class MenuController {
     }
 
     public void help() {
-        Platform.runLater(() -> {
-            Alert a = new Alert(Alert.AlertType.INFORMATION);
-            a.setTitle(rb().getString("help.title"));
-            a.setHeaderText(rb().getString("help.header"));
-            a.setContentText(rb().getString("help.content"));
-            a.showAndWait();
-        });
+        UiNotices.getInstance().showHelp();
     }
 
     public void about() {
-        Platform.runLater(() -> {
-            Alert a = new Alert(Alert.AlertType.INFORMATION);
-            a.setTitle("About " + BuildInfo.getName());
-            a.setHeaderText(BuildInfo.getName() + "\nAutori: " + BuildInfo.getAuthor() + "    Versione: " + BuildInfo.getVersion());
-            a.setContentText(BuildInfo.getDescription()  +
-                    "\nBuild info: " + BuildInfo.buildDate()
-            );
+        String name        = getProp("about.name", "Minesweeper");
+        String version     = getProp("about.version", "0.0.1");
+        String description = getProp("about.description", "Software Engineering project");
+        String author      = getProp("about.copyright", "Authors");
+        String buildDate   = getProp("about.buildDate", "unknown");
+
+        javafx.application.Platform.runLater(() -> {
+            var a = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.INFORMATION);
+            a.setTitle("About " + name);
+            a.setHeaderText(name + "\nAutori: " + author + "    Versione: " + version);
+            a.setContentText(description + "\nBuild info: " + buildDate);
             a.showAndWait();
         });
     }
+    private String getProp(String key, String defVal) {
+        try { return aboutProps.getString(key); }
+        catch (MissingResourceException e) { return defVal; }
+    }
+
+
     public void exit() {
         Platform.exit();
     }

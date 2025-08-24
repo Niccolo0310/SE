@@ -1,8 +1,8 @@
 package ch.supsi.minesweeper;
 
+import ch.supsi.minesweeper.application.PreferenceService;
 import ch.supsi.minesweeper.controller.GameController;
 import ch.supsi.minesweeper.model.AbstractModel;
-import ch.supsi.minesweeper.util.AppPreferences;
 import ch.supsi.minesweeper.view.*;
 import javafx.application.Application;
 import javafx.scene.Scene;
@@ -26,7 +26,7 @@ public class MainFx extends Application {
 
     public MainFx() {
 
-        Locale locale = Locale.forLanguageTag(AppPreferences.getLang());
+        Locale locale = Locale.forLanguageTag(PreferenceService.get().getLang());
         bundle = ResourceBundle.getBundle(BUNDLE_BASE, locale);
         var controller = GameController.getInstance();
         this.model  = controller.model();
@@ -54,6 +54,9 @@ public class MainFx extends Application {
         stage.setTitle(bundle.getString("app.title"));
         stage.setResizable(false);
         stage.setScene(scene);
+
+        UiNotices.getInstance().installExitConfirmation(stage);
+
         stage.show();
     }
 

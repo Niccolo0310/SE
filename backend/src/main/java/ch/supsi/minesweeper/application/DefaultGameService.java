@@ -2,7 +2,7 @@ package ch.supsi.minesweeper.application;
 
 import ch.supsi.minesweeper.model.GameActionResult;
 import ch.supsi.minesweeper.model.GameModel;
-import ch.supsi.minesweeper.persistence.GameRepository;
+import ch.supsi.minesweeper.repository.GameRepository;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -123,7 +123,6 @@ public class DefaultGameService implements GameService {
     }
 
     private void recomputeNeighborCountsFromMines() {
-        // utile se il file salvato non ha neighborCount persistito
         boolean[][] hasMine = model.getHasMine();
         int rows = model.getRows(), cols = model.getCols();
         int[][] nc = new int[rows][cols];

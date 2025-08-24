@@ -1,4 +1,4 @@
-package ch.supsi.minesweeper.persistence;
+package ch.supsi.minesweeper.repository;
 
 public class GameState {
     public int rows;

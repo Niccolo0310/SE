@@ -1,4 +1,4 @@
-package ch.supsi.minesweeper.persistence;
+package ch.supsi.minesweeper.repository;
 
 import ch.supsi.minesweeper.model.GameModel;
 

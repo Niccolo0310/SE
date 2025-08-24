@@ -1,6 +1,6 @@
 package ch.supsi.minesweeper.application;
 
-import ch.supsi.minesweeper.infrastructure.JsonGameRepository;
+import ch.supsi.minesweeper.repository.JsonGameRepository;
 import ch.supsi.minesweeper.model.GameModel;
 
 public final class Services {
