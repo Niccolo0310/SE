@@ -17,7 +17,7 @@ public class MainFx extends Application {
 
     public static final String BUNDLE_BASE = "i18n.messages";
 
-    private final AbstractModel model;
+    private final AbstractModel viewModel;
     private final ControlledFxView menuBarView;
     private final ControlledFxView gameBoardView;
     private final UncontrolledFxView feedbackView;
@@ -29,16 +29,16 @@ public class MainFx extends Application {
         Locale locale = Locale.forLanguageTag(PreferenceService.get().getLang());
         bundle = ResourceBundle.getBundle(BUNDLE_BASE, locale);
         var controller = GameController.getInstance();
-        this.model  = controller.model();
+        this.viewModel  = controller.model();
 
         menuBarView    = MenuBarViewFxml.getInstance(bundle);
         gameBoardView  = GameBoardViewFxml.getInstance(bundle);
         feedbackView   = UserFeedbackViewFxml.getInstance(bundle);
         controller.initialize(List.of(menuBarView, gameBoardView, feedbackView));
 
-        menuBarView.initialize(controller, model);
-        gameBoardView.initialize(controller, model);
-        feedbackView.initialize(model);
+        menuBarView.initialize(controller, viewModel);
+        gameBoardView.initialize(controller, viewModel);
+        feedbackView.initialize(viewModel);
 
     }
 

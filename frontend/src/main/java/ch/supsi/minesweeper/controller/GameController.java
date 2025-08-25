@@ -2,8 +2,7 @@ package ch.supsi.minesweeper.controller;
 
 import ch.supsi.minesweeper.application.PreferenceService;
 import ch.supsi.minesweeper.application.Services;
-import ch.supsi.minesweeper.model.GameModel;
-import ch.supsi.minesweeper.application.GameService;
+import ch.supsi.minesweeper.uimodel.GameViewModel;
 import ch.supsi.minesweeper.view.*;
 
 import javafx.application.Platform;
@@ -19,8 +18,7 @@ import java.util.ResourceBundle;
 public class GameController implements EventHandler {
 
     private static GameController myself;
-    private final GameModel gameModel;     // usato dalle view
-    private final GameService service;     // Nuovo strato applicativo
+    private final GameViewModel vm;
 
     private       List<DataView>    views;
     private final int               defaultBombs;
@@ -30,12 +28,14 @@ public class GameController implements EventHandler {
 
     private GameBoardViewFxml boardView;
     private UiNotices uiNotices;
+    private MenuBarViewFxml menuView;
+    private UserFeedbackViewFxml feedbackView;
 
 
     private GameController() {
-        // Costruisco il service con il repository concreto dal backend
-        this.service     = Services.defaultService();
-        this.gameModel      = service.model(); // reference per le view
+
+        var service    = Services.defaultService(); //recupera il GameService preconfigurato (model + repo) dalla factory Services
+        this.vm = new GameViewModel(service);       //lo espone al FE tramite il ViewModel
 
         this.defaultBombs = PreferenceService.get().getBombs();
         this.bundle       = ResourceBundle.getBundle(
@@ -56,11 +56,20 @@ public class GameController implements EventHandler {
         // cattura la board view
         for (DataView v : views) {
             if (v instanceof GameBoardViewFxml gv) this.boardView = gv;
+            if (v instanceof MenuBarViewFxml mv)   this.menuView  = mv;
+            if (v instanceof UserFeedbackViewFxml fv) this.feedbackView = fv;
         }if (this.boardView == null){
             throw new IllegalStateException("GameBoardView non trovata nelle views");
         }
+        if (this.menuView  == null){
+            throw new IllegalStateException("MenuBarView non trovata nelle views");
+        }
 
-        this.uiNotices = ch.supsi.minesweeper.view.UiNotices.getInstance();
+        if (this.feedbackView == null){
+            throw new IllegalStateException("UserFeedbackView non trovata nelle views");
+        }
+
+        this.uiNotices = UiNotices.getInstance();
 
     }
     public void resetEndNotification() {
@@ -68,11 +77,11 @@ public class GameController implements EventHandler {
     }
     // salva sul path passato
     public void saveTo(Path path) throws IOException {
-        service.save(path); // usa il service
+        vm.save(path); // usa il service
     }
     // carica dal path passato
     public void loadFrom(Path path) throws IOException {
-        service.load(path);
+        vm.load(path);
     }
 
     private ResourceBundle rb() {
@@ -83,10 +92,10 @@ public class GameController implements EventHandler {
     public void newGame() {
         Platform.runLater(() -> {
             gameEndNotified = false;
-            int max   = gameModel.getRows() * gameModel.getCols() - 1;
+            int max   = vm.getRows() * vm.getCols() - 1;
             int bombs = Math.max(1, Math.min(defaultBombs, max));
 
-            service.newGame(bombs); //ora coordina il service
+            vm.newGame(bombs);
 
             // aggiorna solo board e feedback bar
             views.stream()
@@ -94,7 +103,7 @@ public class GameController implements EventHandler {
                     .forEach(DataView::update);
 
             // riabilita Save e Save As su nuova partita
-            MenuBarViewFxml.getInstance().enableSaveOptions();
+            menuView.enableSaveOptions();
 
             uiNotices.showNewGameInfo(bombs);
         });
@@ -102,14 +111,16 @@ public class GameController implements EventHandler {
     public void onCellClick(int r, int c, boolean rightClick,
                             Button btn, Queue<int[]> revealQueue) {
 
-        if (!gameModel.isStarted()) return;
-        var result = service.handleClick(r, c, rightClick);
+        if (!vm.isStarted()) return;
+        var result = vm.handleClick(r, c, rightClick);
 
         switch (result.getType()) {
             case FLAG -> {
                 // delega alla view l'icona
-                boardView.applyFlagGraphic(btn, gameModel.isFlagged(r, c));
-                UserFeedbackViewFxml.getInstance().update();
+                boardView.applyFlagGraphic(btn, vm.isFlagged(r, c));
+                if (feedbackView != null){
+                    feedbackView.update();
+                }
             }
             case REVEAL -> {
                 revealQueue.addAll(result.getOpened());
@@ -146,17 +157,17 @@ public class GameController implements EventHandler {
         if (gameEndNotified) return;   //evita loop di popup
         gameEndNotified = true;
         Platform.runLater(() -> {
-            MenuBarViewFxml.getInstance().disableSaveOptions();
+            menuView.disableSaveOptions();
             uiNotices.showWin();
         });
     }
 
     @Override
     public void lose() {
-        if (gameEndNotified) return;   //evita loop di popup
+        if (gameEndNotified) return;
         gameEndNotified = true;
         Platform.runLater(() -> {
-            MenuBarViewFxml.getInstance().disableSaveOptions();
+            menuView.disableSaveOptions();
             uiNotices.showLose();
         });
     }
@@ -164,7 +175,14 @@ public class GameController implements EventHandler {
     @Override
     public void move() {}
 
-    public GameModel model() { return gameModel; }
+    public GameViewModel model() { return vm; }
+
+    public int currentBombs() { return PreferenceService.get().getBombs(); }
+    public String currentLang() { return PreferenceService.get().getLang(); }
+    public void updatePreferences(int bombs, String lang) {
+        PreferenceService.get().setBombs(bombs);
+        PreferenceService.get().setLang(lang);
+    }
 
 
 

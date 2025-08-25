@@ -25,7 +25,7 @@ public class JsonGameRepository implements GameRepository {
     public void load(GameModel model, Path path) throws IOException {
 
         //leggi il JSON
-        GameState dto = readJson(path); // tua funzione interna
+        GameState dto = readJson(path); //funzione interna
 
         //dati grezzi nel model
         model.setMines(dto.mines);

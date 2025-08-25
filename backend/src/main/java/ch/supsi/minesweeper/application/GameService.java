@@ -7,10 +7,10 @@ import java.io.IOException;
 import java.nio.file.Path;
 
 public interface GameService {
-    //Espone il model per le view del FE (read-only via API pubbliche del model)
+    //Espone il model per le view
     GameModel model();
 
-    //Avvia una nuova partita con il numero di bombe deciso dal FE (preferences)
+    //Avvia una nuova partita con bombe prese da preferences
     void newGame(int bombs);
 
     // Unica entrypoint per i click provenienti dalla view

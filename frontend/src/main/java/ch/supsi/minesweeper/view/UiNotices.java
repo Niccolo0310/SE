@@ -25,7 +25,7 @@ public final class UiNotices {
         return INSTANCE;
     }
 
-    // Feedback feedback bar
+    //feedback feedback bar
     public void showNewGameInfo(int bombs) {
         String msg = MessageFormat.format(bundle.getString("dialog.new.body"), bombs);
         UserFeedbackViewFxml.getInstance().showInfo(msg);

@@ -5,8 +5,6 @@ import ch.supsi.minesweeper.application.PreferenceService;
 import ch.supsi.minesweeper.view.DataView;
 import ch.supsi.minesweeper.view.MenuBarViewFxml;
 import ch.supsi.minesweeper.view.UiNotices;
-import javafx.application.Platform;
-import javafx.scene.control.Alert;
 import javafx.stage.FileChooser;
 
 import java.io.File;
@@ -24,6 +22,7 @@ public class MenuController {
     private final ResourceBundle bundle;
     private Path currentFile = null;
     private final ResourceBundle aboutProps = ResourceBundle.getBundle("config");
+    private MenuBarViewFxml menuView;
 
     private MenuController() {
         this.bundle = ResourceBundle.getBundle("i18n.messages",
@@ -38,14 +37,15 @@ public class MenuController {
     //viene Chiamata da GameController.initialize() per passare le view.
     public void initialize(List<DataView> views) {
         this.views = views;
+        this.menuView = views.stream()
+                .filter(v -> v instanceof MenuBarViewFxml)
+                .map(v -> (MenuBarViewFxml) v)
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("MenuBarView non trovata nelle views"));
     }
 
     private ResourceBundle rb() { return bundle; }
 
-
-    public void newGame() {
-        GameController.getInstance().newGame();
-    }
 
     public void save() {
         if (currentFile == null) {
@@ -87,7 +87,7 @@ public class MenuController {
                         .filter(v -> !(v instanceof MenuBarViewFxml))
                         .forEach(DataView::update);
             }
-            MenuBarViewFxml.getInstance().enableSaveOptions();
+            menuView.enableSaveOptions();
 
             UiNotices.getInstance().showInfo(rb().getString("dialog.load.success"));
         } catch (IOException ex) {
@@ -133,8 +133,4 @@ public class MenuController {
         catch (MissingResourceException e) { return defVal; }
     }
 
-
-    public void exit() {
-        Platform.exit();
-    }
 }

@@ -3,6 +3,7 @@ package ch.supsi.minesweeper.view;
 import ch.supsi.minesweeper.controller.EventHandler;
 import ch.supsi.minesweeper.controller.GameController;
 import ch.supsi.minesweeper.model.*;
+import ch.supsi.minesweeper.uimodel.GameViewModel;
 import javafx.animation.AnimationTimer;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -25,13 +26,12 @@ public class GameBoardViewFxml implements ControlledFxView {
     private static final double BUTTON_SIZE = 37;
     private static final double IMAGE_SIZE  = 30;
 
-    private GameModel          gameModel;
+    private GameViewModel          gameModel;
     private GameController controller;
 
     @FXML private GridPane containerPane;
     private Image flagImg, bombImg;
 
-    // Coda per reveal progressivo
     private final Queue<int[]> revealQueue = new ArrayDeque<>();
 
     private GameBoardViewFxml(ResourceBundle bundle) {
@@ -58,7 +58,7 @@ public class GameBoardViewFxml implements ControlledFxView {
     @Override
     public void initialize(EventHandler evt, AbstractModel model) {
         this.controller = (GameController) evt;
-        this.gameModel  = (GameModel) model;
+        this.gameModel  = (GameViewModel) model;
         setupGrid();
         // Avvia animazione progressiva per il reveal
         startRevealAnimator();
@@ -168,7 +168,7 @@ public class GameBoardViewFxml implements ControlledFxView {
         return iv;
     }
 
-    // Reveal progressivo con AnimationTimer
+    //Reveal progressivo con AnimationTimer
     private void startRevealAnimator() {
         AnimationTimer timer = new AnimationTimer() {
             @Override
