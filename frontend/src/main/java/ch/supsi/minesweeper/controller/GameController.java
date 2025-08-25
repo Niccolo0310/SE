@@ -172,9 +172,6 @@ public class GameController implements EventHandler {
         });
     }
 
-    @Override
-    public void move() {}
-
     public GameViewModel model() { return vm; }
 
     public int currentBombs() { return PreferenceService.get().getBombs(); }
