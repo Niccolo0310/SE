@@ -1,43 +1,47 @@
 package ch.supsi.minesweeper.controller;
 
-import ch.supsi.minesweeper.model.GameEventHandler;
-import ch.supsi.minesweeper.model.GameModel;
-import ch.supsi.minesweeper.model.JsonGamePersistence;
-import ch.supsi.minesweeper.model.GamePersistence;
-import ch.supsi.minesweeper.model.PlayerEventHandler;
-import ch.supsi.minesweeper.view.DataView;
-import ch.supsi.minesweeper.view.MenuBarViewFxml;
-import ch.supsi.minesweeper.util.AppPreferences;
+import ch.supsi.minesweeper.application.PreferenceService;
+import ch.supsi.minesweeper.application.Services;
+import ch.supsi.minesweeper.model.GameViewModel;
+import ch.supsi.minesweeper.view.*;
+
 import javafx.application.Platform;
-import javafx.scene.control.Alert;
-import javafx.scene.control.Alert.AlertType;
-import javafx.stage.FileChooser;
-import java.io.File;
+import javafx.scene.control.Button;
+
 import java.io.IOException;
 import java.nio.file.Path;
-import java.text.MessageFormat;
 import java.util.List;
 import java.util.Locale;
+import java.util.Queue;
 import java.util.ResourceBundle;
 
-public class GameController implements GameEventHandler, PlayerEventHandler {
+public class GameController implements EventHandler {
 
     private static GameController myself;
-    private final GameModel        gameModel;
-    private final GamePersistence   persistence;
+    private final GameViewModel vm;
+
     private       List<DataView>    views;
     private final int               defaultBombs;
     private final ResourceBundle    bundle;
+    // mostra win/lose una sola volta per partita
+    private volatile boolean gameEndNotified = false;
 
-    private Path currentFile = null;
+    private GameBoardViewFxml boardView;
+    private UiNotices uiNotices;
+    private MenuBarViewFxml menuView;
+    private UserFeedbackViewFxml feedbackView;
+    private volatile boolean dirty = false;
+
 
     private GameController() {
-        this.gameModel    = GameModel.getInstance();
-        this.persistence  = new JsonGamePersistence();
-        this.defaultBombs = AppPreferences.getBombs();
+
+        var service    = Services.defaultService(); //recupera il GameService preconfigurato (model + repo) dalla factory Services
+        this.vm = new GameViewModel(service);       //lo espone al FE tramite il ViewModel
+
+        this.defaultBombs = PreferenceService.get().getBombs();
         this.bundle       = ResourceBundle.getBundle(
                 "i18n.messages",
-                Locale.forLanguageTag(AppPreferences.getLang()));
+                Locale.forLanguageTag(PreferenceService.get().getLang()));
     }
 
     public static GameController getInstance() {
@@ -47,7 +51,42 @@ public class GameController implements GameEventHandler, PlayerEventHandler {
 
     public void initialize(List<DataView> views) {
         this.views = views;
+        MenuController.getInstance().initialize(views);
         // save e save as restano disabilitate fino a newGame() o open()
+
+        // cattura la board view
+        for (DataView v : views) {
+            if (v instanceof GameBoardViewFxml gv) this.boardView = gv;
+            if (v instanceof MenuBarViewFxml mv)   this.menuView  = mv;
+            if (v instanceof UserFeedbackViewFxml fv) this.feedbackView = fv;
+        }if (this.boardView == null){
+            throw new IllegalStateException("GameBoardView non trovata nelle views");
+        }
+        if (this.menuView  == null){
+            throw new IllegalStateException("MenuBarView non trovata nelle views");
+        }
+
+        if (this.feedbackView == null){
+            throw new IllegalStateException("UserFeedbackView non trovata nelle views");
+        }
+
+        this.uiNotices = UiNotices.getInstance();
+
+    }
+    public void resetEndNotification() {
+        this.gameEndNotified = false;
+    }
+    // salva sul path passato
+    public void saveTo(Path path) throws IOException {
+        vm.save(path); // usa il service
+        dirty = false;
+        UiNotices.getInstance().disarmExitPrompt();
+    }
+    // carica dal path passato
+    public void loadFrom(Path path) throws IOException {
+        vm.load(path);
+        dirty = false;
+        UiNotices.getInstance().disarmExitPrompt();
     }
 
     private ResourceBundle rb() {
@@ -57,194 +96,106 @@ public class GameController implements GameEventHandler, PlayerEventHandler {
     @Override
     public void newGame() {
         Platform.runLater(() -> {
-            int max   = gameModel.getRows() * gameModel.getCols() - 1;
+            UiNotices.getInstance().disarmExitPrompt();
+            gameEndNotified = false;
+            int max   = vm.getRows() * vm.getCols() - 1;
             int bombs = Math.max(1, Math.min(defaultBombs, max));
 
-            gameModel.setMines(bombs);
-            gameModel.newGame();
-            views.forEach(DataView::update);
+            vm.newGame(bombs);
+            dirty = true; //avvisa che ci sono modifiche non salvate
+            // aggiorna solo board e feedback bar
+            views.stream()
+                    .filter(v -> !(v instanceof MenuBarViewFxml))
+                    .forEach(DataView::update);
 
             // riabilita Save e Save As su nuova partita
-            MenuBarViewFxml.getInstance().enableSaveOptions();
+            menuView.enableSaveOptions();
 
-            Alert info = new Alert(AlertType.INFORMATION);
-            info.setTitle(rb().getString("dialog.new.title"));
-            info.setHeaderText(null);
-            info.setContentText(
-                    MessageFormat.format(rb().getString("dialog.new.body"), bombs));
-            info.showAndWait();
+            uiNotices.showNewGameInfo(bombs);
         });
     }
+    public void onCellClick(int r, int c, boolean rightClick,
+                            Button btn, Queue<int[]> revealQueue) {
+        UiNotices.getInstance().disarmExitPrompt();
 
-    @Override
-    public void save() {
-        if (currentFile == null) {
-            saveAs();
-            return;
-        }
-        try {
-            persistence.save(gameModel, currentFile);
-            views.forEach(DataView::update);
-            Platform.runLater(() -> {
-                Alert info = new Alert(AlertType.INFORMATION,
-                        rb().getString("dialog.save.success"));
-                info.setHeaderText(null);
-                info.showAndWait();
-            });
-        } catch (IOException e) {
-            e.printStackTrace();
-            Platform.runLater(() -> {
-                Alert err = new Alert(AlertType.ERROR,
-                        rb().getString("dialog.save.error"));
-                err.setHeaderText(null);
-                err.showAndWait();
-            });
-        }
-    }
+        if (!vm.isStarted()) return;
+        var result = vm.handleClick(r, c, rightClick);
 
-    public void saveAs() {
-        FileChooser chooser = new FileChooser();
-        chooser.setTitle(rb().getString("menu.file.saveas"));
-        chooser.getExtensionFilters().add(
-                new FileChooser.ExtensionFilter("JSON Files", "*.json")
-        );
-        File file = chooser.showSaveDialog(null);
-        if (file != null) {
-            currentFile = file.toPath();
-            try {
-                persistence.save(gameModel, currentFile);
-                views.forEach(DataView::update);
-                Platform.runLater(() -> {
-                    Alert info = new Alert(AlertType.INFORMATION,
-                            rb().getString("dialog.save.success"));
-                    info.setHeaderText(null);
-                    info.showAndWait();
-                });
-            } catch (IOException ex) {
-                ex.printStackTrace();
-                Platform.runLater(() -> {
-                    Alert err = new Alert(AlertType.ERROR,
-                            rb().getString("dialog.save.error"));
-                    err.setHeaderText(null);
-                    err.showAndWait();
-                });
+        switch (result.getType()) {
+            case FLAG -> {
+                // delega alla view l'icona
+                boardView.applyFlagGraphic(btn, vm.isFlagged(r, c));
+                if (feedbackView != null){
+                    feedbackView.update();
+                }
+                dirty = true;
             }
-        }
-    }
-
-    @Override
-    public void load() {
-        // Se non c’è ancora un currentFile, apri con FileChooser
-        if (currentFile == null) {
-            open();
-            return;
-        }
-        try {
-            persistence.load(gameModel, currentFile);
-            views.forEach(DataView::update);
-            // Riabilita Save/Save As dopo aver caricato
-            MenuBarViewFxml.getInstance().enableSaveOptions();
-
-            Platform.runLater(() -> {
-                Alert info = new Alert(AlertType.INFORMATION,
-                        rb().getString("dialog.load.success"));
-                info.setHeaderText(null);
-                info.showAndWait();
-            });
-        } catch (IOException ex) {
-            ex.printStackTrace();
-            Platform.runLater(() -> {
-                Alert err = new Alert(AlertType.ERROR,
-                        rb().getString("dialog.load.error"));
-                err.setHeaderText(null);
-                err.showAndWait();
-            });
-        }
-    }
-
-    public void open() {
-        FileChooser chooser = new FileChooser();
-        chooser.setTitle(rb().getString("menu.file.open"));
-        chooser.getExtensionFilters().add(
-                new FileChooser.ExtensionFilter("JSON Files", "*.json")
-        );
-        File file = chooser.showOpenDialog(null);
-        if (file != null) {
-            currentFile = file.toPath();
-            try {
-                persistence.load(gameModel, currentFile);
-                views.forEach(DataView::update);
-                // Riabilita Save/Save As dopo aver caricato
-                MenuBarViewFxml.getInstance().enableSaveOptions();
-
-                Platform.runLater(() -> {
-                    Alert info = new Alert(AlertType.INFORMATION,
-                            rb().getString("dialog.load.success"));
-                    info.setHeaderText(null);
-                    info.showAndWait();
-                });
-            } catch (IOException ex) {
-                ex.printStackTrace();
-                Platform.runLater(() -> {
-                    Alert err = new Alert(AlertType.ERROR,
-                            rb().getString("dialog.load.error"));
-                    err.setHeaderText(null);
-                    err.showAndWait();
-                });
+            case REVEAL -> {
+                revealQueue.addAll(result.getOpened());
+                dirty = true;
+                if (result.isMineHit()) {
+                    boardView.revealAllMinesAndDisable();
+                    lose();
+                } else if (result.isWin()) {
+                    boardView.revealAllMinesAndDisable();
+                    win();
+                }
             }
+            case NONE -> {}
         }
     }
 
     @Override
-    public void help() {
-        Platform.runLater(() -> {
-            Alert a = new Alert(AlertType.INFORMATION);
-            a.setTitle(rb().getString("help.title"));
-            a.setHeaderText(rb().getString("help.header"));
-            a.setContentText(rb().getString("help.content"));
-            a.showAndWait();
-        });
-    }
+    public void save() { MenuController.getInstance().save(); }
+
+    public void saveAs() { MenuController.getInstance().saveAs(); }
 
     @Override
-    public void about() {
-        Platform.runLater(() -> {
-            Alert a = new Alert(AlertType.INFORMATION);
-            a.setTitle(rb().getString("about.title"));
-            a.setHeaderText(rb().getString("about.header"));
-            a.setContentText(rb().getString("about.content"));
-            a.showAndWait();
-        });
-    }
+    public void load() { MenuController.getInstance().load(); }
+
+    public void open() { MenuController.getInstance().open(); }
+
+    @Override
+    public void help() { MenuController.getInstance().help(); }
+
+    @Override
+    public void about() { MenuController.getInstance().about(); }
 
     @Override
     public void win() {
+        if (gameEndNotified) return;   //evita loop di popup
+        gameEndNotified = true;
         Platform.runLater(() -> {
-            // disabilita Save e Save As quando si vince
-            MenuBarViewFxml.getInstance().disableSaveOptions();
-            Alert a = new Alert(AlertType.INFORMATION);
-            a.setTitle(rb().getString("alert.win.title"));
-            a.setHeaderText(null);
-            a.setContentText(rb().getString("alert.win.text"));
-            a.showAndWait();
+            menuView.disableSaveOptions();
+            uiNotices.showWin();
         });
     }
 
     @Override
     public void lose() {
+        if (gameEndNotified) return;
+        gameEndNotified = true;
         Platform.runLater(() -> {
-            // disabilita Save e Save As quando si perde
-            MenuBarViewFxml.getInstance().disableSaveOptions();
-            Alert a = new Alert(AlertType.ERROR);
-            a.setTitle(rb().getString("alert.lose.title"));
-            a.setHeaderText(rb().getString("alert.lose.header"));
-            a.setContentText(rb().getString("alert.lose.text"));
-            a.showAndWait();
+            menuView.disableSaveOptions();
+            uiNotices.showLose();
         });
     }
+    @Override public void exit()   { MenuController.getInstance().exit(); }
 
-    @Override
-    public void move() {
-        gameModel.move();
+
+    public GameViewModel model() { return vm; }
+
+    public int currentBombs() { return PreferenceService.get().getBombs(); }
+    public String currentLang() { return PreferenceService.get().getLang(); }
+    public void updatePreferences(int bombs, String lang) {
+        PreferenceService.get().setBombs(bombs);
+        PreferenceService.get().setLang(lang);
+        UiNotices.getInstance().disarmExitPrompt();
     }
+
+    public boolean hasUnsavedChanges() { return dirty; }
+
+
+
 }
+

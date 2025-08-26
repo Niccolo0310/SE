@@ -1,13 +1,14 @@
 package ch.supsi.minesweeper.view;
 
+import ch.supsi.minesweeper.application.PreferenceService;
 import ch.supsi.minesweeper.model.AbstractModel;
-import ch.supsi.minesweeper.model.GameModel;
-import ch.supsi.minesweeper.util.AppPreferences;
+import ch.supsi.minesweeper.model.GameViewModel;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.text.Text;
+import javafx.application.Platform;
 
 import java.io.IOException;
 import java.net.URL;
@@ -18,7 +19,7 @@ public class UserFeedbackViewFxml implements UncontrolledFxView {
 
     private static UserFeedbackViewFxml myself;
     private final ResourceBundle bundle;
-    private GameModel gameModel;
+    private GameViewModel gameModel;
     @FXML private ScrollPane containerPane;
     @FXML private Text       userFeedbackBar;
     private UserFeedbackViewFxml(ResourceBundle bundle) { this.bundle = bundle; }
@@ -41,12 +42,12 @@ public class UserFeedbackViewFxml implements UncontrolledFxView {
     public static UserFeedbackViewFxml getInstance() {
         ResourceBundle def = ResourceBundle.getBundle(
                 "i18n.messages",
-                Locale.forLanguageTag(AppPreferences.getLang()));
+                Locale.forLanguageTag(PreferenceService.get().getLang()));
         return getInstance(def);
     }
 
     @Override public void initialize(AbstractModel model) {
-        gameModel = (GameModel) model;
+        gameModel = (GameViewModel) model;
         update();
     }
     @Override public Node getNode() { return containerPane; }
@@ -58,5 +59,17 @@ public class UserFeedbackViewFxml implements UncontrolledFxView {
         int remaining = total - flags;
         String fmt = bundle.getString("status.bombs");
         userFeedbackBar.setText(java.text.MessageFormat.format(fmt, remaining, total));
+    }
+
+    public void showInfo(String text) {
+        Platform.runLater(() -> {
+            userFeedbackBar.setText(text);
+        });
+    }
+
+    public void showError(String text) {
+        Platform.runLater(() -> {
+            userFeedbackBar.setText(text);
+        });
     }
 }

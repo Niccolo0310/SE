@@ -9,11 +9,16 @@
     <version>1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
+    <name>Minesweeper JavaFX</name>
+    <description>SE MineSweeper</description>
+    <inceptionYear>2025</inceptionYear>
+
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <maven.compiler.release>17</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.build.timestamp.format>yyyy-MM-dd</maven.build.timestamp.format>
     </properties>
 
     <dependencies>
@@ -36,6 +41,12 @@
 
     <build>
         <finalName>minesweeper</finalName>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+            </resource>
+        </resources>
 
         <plugins>
 
@@ -46,13 +57,22 @@
             </plugin>
 
             <plugin>
+                <groupId>org.openjfx</groupId>
+                <artifactId>javafx-maven-plugin</artifactId>
+                <version>0.0.8</version>
+                <configuration>
+                    <mainClass>ch.supsi.minesweeper.Main</mainClass>
+                </configuration>
+            </plugin>
+
+            <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-assembly-plugin</artifactId>
                 <version>3.7.1</version>
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>ch.supsi.minesweeper.Main</mainClass>
+                            <mainClass>ch.supsi.minesweeper.MainFx</mainClass>
                             <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
                         </manifest>
                     </archive>

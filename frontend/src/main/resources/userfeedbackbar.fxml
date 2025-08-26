@@ -3,7 +3,7 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.text.Text?>
-<ScrollPane fx:id="containerPane" prefWidth="1" vbarPolicy="NEVER" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
+<ScrollPane fx:id="containerPane" prefWidth="1" prefHeight="90" vbarPolicy="NEVER" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
     <padding>
         <Insets top="3" right="11" bottom="1" left="11"/>
     </padding>

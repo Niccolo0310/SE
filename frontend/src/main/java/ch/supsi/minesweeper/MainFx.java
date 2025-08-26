@@ -1,11 +1,8 @@
 package ch.supsi.minesweeper;
 
-import ch.supsi.minesweeper.controller.EventHandler;
+import ch.supsi.minesweeper.application.PreferenceService;
 import ch.supsi.minesweeper.controller.GameController;
-
 import ch.supsi.minesweeper.model.AbstractModel;
-import ch.supsi.minesweeper.model.GameModel;
-import ch.supsi.minesweeper.util.AppPreferences;
 import ch.supsi.minesweeper.view.*;
 import javafx.application.Application;
 import javafx.scene.Scene;
@@ -20,7 +17,7 @@ public class MainFx extends Application {
 
     public static final String BUNDLE_BASE = "i18n.messages";
 
-    private final AbstractModel model;
+    private final AbstractModel viewModel;
     private final ControlledFxView menuBarView;
     private final ControlledFxView gameBoardView;
     private final UncontrolledFxView feedbackView;
@@ -29,23 +26,20 @@ public class MainFx extends Application {
 
     public MainFx() {
 
-
-        Locale locale = Locale.forLanguageTag(AppPreferences.getLang());
+        Locale locale = Locale.forLanguageTag(PreferenceService.get().getLang());
         bundle = ResourceBundle.getBundle(BUNDLE_BASE, locale);
-
-        model          = GameModel.getInstance();
+        var controller = GameController.getInstance();
+        this.viewModel  = controller.model();
 
         menuBarView    = MenuBarViewFxml.getInstance(bundle);
         gameBoardView  = GameBoardViewFxml.getInstance(bundle);
         feedbackView   = UserFeedbackViewFxml.getInstance(bundle);
-
-        GameController controller = GameController.getInstance();
-
-        menuBarView.initialize((EventHandler) controller, model);
-        gameBoardView.initialize((EventHandler) controller, model);
-        feedbackView.initialize(model);
-
         controller.initialize(List.of(menuBarView, gameBoardView, feedbackView));
+
+        menuBarView.initialize(controller, viewModel);
+        gameBoardView.initialize(controller, viewModel);
+        feedbackView.initialize(viewModel);
+
     }
 
     @Override
@@ -60,6 +54,12 @@ public class MainFx extends Application {
         stage.setTitle(bundle.getString("app.title"));
         stage.setResizable(false);
         stage.setScene(scene);
+
+        UiNotices.getInstance().installExitConfirmation(
+                stage,
+                () -> GameController.getInstance().hasUnsavedChanges()
+        );
+
         stage.show();
     }
 

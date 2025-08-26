@@ -1,11 +1,10 @@
 package ch.supsi.minesweeper.view;
 
 import ch.supsi.minesweeper.controller.EventHandler;
-import ch.supsi.minesweeper.model.AbstractModel;
-import ch.supsi.minesweeper.model.GameEventHandler;
-import ch.supsi.minesweeper.model.GameModel;
-import ch.supsi.minesweeper.model.PlayerEventHandler;
-import ch.supsi.minesweeper.util.AppPreferences;
+import ch.supsi.minesweeper.controller.GameController;
+import ch.supsi.minesweeper.model.*;
+import ch.supsi.minesweeper.model.GameViewModel;
+import javafx.animation.AnimationTimer;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
@@ -15,6 +14,7 @@ import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.GridPane;
+
 import java.io.IOException;
 import java.net.URL;
 import java.util.*;
@@ -26,18 +26,19 @@ public class GameBoardViewFxml implements ControlledFxView {
     private static final double BUTTON_SIZE = 37;
     private static final double IMAGE_SIZE  = 30;
 
-    private PlayerEventHandler playerEventHandler;
-    private GameEventHandler   gameEventHandler;
-    private GameModel          gameModel;
+    private GameViewModel          gameModel;
+    private GameController controller;
 
     @FXML private GridPane containerPane;
-    private final Map<Integer, Image> numberImages = new HashMap<>();
     private Image flagImg, bombImg;
+
+    private final Queue<int[]> revealQueue = new ArrayDeque<>();
 
     private GameBoardViewFxml(ResourceBundle bundle) {
         this.bundle = bundle;
         loadImages();
     }
+
 
     public static GameBoardViewFxml getInstance(ResourceBundle bundle) {
         if (myself == null) {
@@ -56,10 +57,11 @@ public class GameBoardViewFxml implements ControlledFxView {
 
     @Override
     public void initialize(EventHandler evt, AbstractModel model) {
-        playerEventHandler = (PlayerEventHandler) evt;
-        gameEventHandler   = (GameEventHandler)   evt;
-        gameModel          = (GameModel) model;
+        this.controller = (GameController) evt;
+        this.gameModel  = (GameViewModel) model;
         setupGrid();
+        // Avvia animazione progressiva per il reveal
+        startRevealAnimator();
     }
 
     @Override
@@ -75,26 +77,17 @@ public class GameBoardViewFxml implements ControlledFxView {
             int col = Optional.ofNullable(GridPane.getColumnIndex(btn)).orElse(0);
 
             if (gameModel.isRevealed(row, col)) {
-                if (gameModel.hasMineAt(row, col)) {
-                    btn.setGraphic(makeIcon(bombImg));
-                } else {
-                    int cnt = gameModel.getNeighborCountAt(row, col);
-                    if (cnt > 0) {
-                        btn.setGraphic(makeIcon(numberImages.get(cnt)));
-                    } else {
-                        btn.setGraphic(null);
-                    }
-                }
+                drawCell(btn, row, col);
                 btn.setDisable(true);
             }
             else if (gameModel.isFlagged(row, col)) {
-                // se con bandiera
                 btn.setGraphic(makeIcon(flagImg));
+                btn.setText("");
                 btn.setDisable(false);
             }
             else {
-                // cella coperta e non flaggata
                 btn.setGraphic(null);
+                btn.setText("");
                 btn.setDisable(!gameModel.isStarted());
             }
         }
@@ -115,70 +108,42 @@ public class GameBoardViewFxml implements ControlledFxView {
     }
 
     private void handleClick(MouseEvent e, int r, int c, Button btn) {
-        if (!gameModel.isStarted()) return;
-
-        if (e.getButton() == MouseButton.SECONDARY) {
-            gameModel.toggleFlag(r, c);
-            if (gameModel.isFlagged(r, c)) {
-                btn.setGraphic(makeIcon(flagImg));
-            } else {
-                btn.setGraphic(null);
-            }
-            UserFeedbackViewFxml.getInstance().update();
-        }
-        else if (e.getButton() == MouseButton.PRIMARY && !gameModel.isFlagged(r, c)) {
-            revealCell(r, c);
-        }
+        boolean right = (e.getButton() == MouseButton.SECONDARY);
+        controller.onCellClick(r, c, right, btn, revealQueue);
         e.consume();
     }
 
-    private void revealCell(int r, int c) {
-        List<int[]> opened = gameModel.revealArea(r, c);
 
-        for (int[] pos : opened) {
-            int row = pos[0], col = pos[1];
-            Button b = getButtonAt(row, col);
-
-            if (gameModel.hasMineAt(row, col)) {
-                b.setGraphic(makeIcon(bombImg));
-            } else {
-                int cnt = gameModel.getNeighborCountAt(row, col);
-                if (cnt > 0) {
-                    b.setGraphic(makeIcon(numberImages.get(cnt)));
-                } else {
-                    b.setGraphic(null);
-                }
-            }
-            b.setDisable(true);
+    // Disegna singola cella (bomba, numero, vuoto)
+    private void drawCell(Button b, int row, int col) {
+        if (gameModel.hasMineAt(row, col)) {
+            b.setGraphic(makeIcon(bombImg));
+            b.setText("");
+        } else {
+            int cnt = gameModel.getNeighborCountAt(row, col);
+            b.setGraphic(null);
+            b.setText(cnt > 0 ? String.valueOf(cnt) : "");
         }
+        b.setDisable(true);
+    }
 
-        if (gameModel.hasMineAt(r, c)) {
-            disableAll();
-            gameEventHandler.lose();
-        }
-        else if (gameModel.isWin()) {
-            disableAll();
-            gameEventHandler.win();
+    public void disableAll() {
+        for (Node n : containerPane.getChildren()) {
+            (n).setDisable(true);
         }
     }
 
-    private void disableAll() {
-        for (Node n : containerPane.getChildren()) {
-            Button b = (Button) n;
-            int rr = Optional.ofNullable(GridPane.getRowIndex(b)).orElse(0);
-            int cc = Optional.ofNullable(GridPane.getColumnIndex(b)).orElse(0);
-            if (gameModel.hasMineAt(rr, cc)) {
-                b.setGraphic(makeIcon(bombImg));
-            }
-            b.setDisable(true);
+    public void applyFlagGraphic(Button btn, boolean flagged) {
+        if (flagged) {
+            btn.setGraphic(makeIcon(flagImg));
+            btn.setText("");
+        } else {
+            btn.setGraphic(null);
+            btn.setText("");
         }
     }
 
     private void loadImages() {
-        for (int i = 1; i <= 8; i++) {
-            numberImages.put(i,
-                    new Image(getClass().getResourceAsStream("/images/" + i + ".png")));
-        }
         flagImg = new Image(getClass().getResourceAsStream("/images/flag.png"));
         bombImg = new Image(getClass().getResourceAsStream("/images/bomb.png"));
     }
@@ -202,4 +167,46 @@ public class GameBoardViewFxml implements ControlledFxView {
         iv.setFitHeight(IMAGE_SIZE);
         return iv;
     }
+
+    //Reveal progressivo con AnimationTimer
+    private void startRevealAnimator() {
+        AnimationTimer timer = new AnimationTimer() {
+            @Override
+            public void handle(long now) {
+                int batch = 15; // quante celle aggiornare per frame
+                for (int i = 0; i < batch && !revealQueue.isEmpty(); i++) {
+                    int[] pos = revealQueue.poll();
+                    int row = pos[0], col = pos[1];
+                    Button b = getButtonAt(row, col);
+                    drawCell(b, row, col);
+                }
+
+                // check win/lose alla fine
+                if (gameModel.isWin() && controller != null) {
+                    disableAll();
+                    controller.win();
+                }
+            }
+        };
+        timer.start();
+    }
+    public void revealAllMinesAndDisable() {
+        for (Node n : containerPane.getChildren()) {
+            Button b = (Button) n;
+            int r = Optional.ofNullable(GridPane.getRowIndex(b)).orElse(0);
+            int c = Optional.ofNullable(GridPane.getColumnIndex(b)).orElse(0);
+
+            if (gameModel.hasMineAt(r, c)) {
+                b.setGraphic(makeIcon(bombImg));
+                b.setText("");
+            } else if (gameModel.isRevealed(r, c)) {
+                drawCell(b, r, c); // già mette numero o vuoto
+            } else {
+                b.setGraphic(null);
+                b.setText("");
+            }
+            b.setDisable(true);
+        }
+    }
+
 }
