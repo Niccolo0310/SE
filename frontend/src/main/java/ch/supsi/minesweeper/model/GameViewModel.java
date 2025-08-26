@@ -1,9 +1,6 @@
-package ch.supsi.minesweeper.uimodel;
+package ch.supsi.minesweeper.model;
 
 import ch.supsi.minesweeper.application.GameService;
-import ch.supsi.minesweeper.model.AbstractModel;
-import ch.supsi.minesweeper.model.GameActionResult;
-import ch.supsi.minesweeper.model.GameModel;
 
 import java.io.IOException;
 import java.nio.file.Path;

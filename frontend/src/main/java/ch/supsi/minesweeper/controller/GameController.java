@@ -2,7 +2,7 @@ package ch.supsi.minesweeper.controller;
 
 import ch.supsi.minesweeper.application.PreferenceService;
 import ch.supsi.minesweeper.application.Services;
-import ch.supsi.minesweeper.uimodel.GameViewModel;
+import ch.supsi.minesweeper.model.GameViewModel;
 import ch.supsi.minesweeper.view.*;
 
 import javafx.application.Platform;

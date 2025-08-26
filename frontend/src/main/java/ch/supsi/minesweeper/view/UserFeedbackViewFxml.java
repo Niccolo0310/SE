@@ -2,7 +2,7 @@ package ch.supsi.minesweeper.view;
 
 import ch.supsi.minesweeper.application.PreferenceService;
 import ch.supsi.minesweeper.model.AbstractModel;
-import ch.supsi.minesweeper.uimodel.GameViewModel;
+import ch.supsi.minesweeper.model.GameViewModel;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
