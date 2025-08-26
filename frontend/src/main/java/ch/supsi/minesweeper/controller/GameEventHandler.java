@@ -9,4 +9,7 @@ public interface GameEventHandler {
     void about();
     void win();
     void lose();
+    void open();
+    void saveAs();
+    void exit();
 }

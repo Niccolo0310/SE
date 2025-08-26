@@ -10,7 +10,7 @@
     <packaging>jar</packaging>
 
     <name>Minesweeper JavaFX</name>
-    <description>Progetto sviluppato per il corso di Ingegneria del Software</description>
+    <description>SE MineSweeper</description>
     <inceptionYear>2025</inceptionYear>
 
     <properties>

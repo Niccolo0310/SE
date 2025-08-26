@@ -1,22 +1,21 @@
 package ch.supsi.minesweeper.view;
 
-import java.text.MessageFormat;
-import java.util.Locale;
 import java.util.ResourceBundle;
+import java.util.function.BooleanSupplier;
 
-import ch.supsi.minesweeper.application.PreferenceService;
-import javafx.scene.control.Alert;
-import javafx.scene.control.ButtonType;
 import javafx.stage.Stage;
 
 public final class UiNotices {
     private static UiNotices INSTANCE;
     private final ResourceBundle bundle;
+    private volatile boolean exitArmed = false;
 
     private UiNotices() {
         this.bundle = ResourceBundle.getBundle(
                 "i18n.messages",
-                Locale.forLanguageTag(PreferenceService.get().getLang())
+                java.util.Locale.forLanguageTag(
+                        ch.supsi.minesweeper.application.PreferenceService.get().getLang()
+                )
         );
     }
 
@@ -27,7 +26,8 @@ public final class UiNotices {
 
     //feedback feedback bar
     public void showNewGameInfo(int bombs) {
-        String msg = MessageFormat.format(bundle.getString("dialog.new.body"), bombs);
+        String pattern = bundle.getString("dialog.new.body");
+        String msg = java.text.MessageFormat.format(pattern, bombs);
         UserFeedbackViewFxml.getInstance().showInfo(msg);
     }
 
@@ -52,27 +52,37 @@ public final class UiNotices {
     }
 
 
-    public void installExitConfirmation(Stage stage) {
-        // handler unico per la X della finestra
+    public void installExitConfirmation(Stage stage, BooleanSupplier unsaved) {
         stage.setOnCloseRequest(evt -> {
-            // ricarico il bundle in base alla lingua corrente (cold reload)
-            ResourceBundle b = ResourceBundle.getBundle(
-                    "i18n.messages",
-                    Locale.forLanguageTag(PreferenceService.get().getLang())
-            );
-
-            Alert confirm = new Alert(Alert.AlertType.CONFIRMATION,
-                    b.getString("quit.ask"), ButtonType.YES, ButtonType.NO);
-            confirm.setHeaderText(null);
-            confirm.setTitle(b.getString("quit.title"));
-
-            var result = confirm.showAndWait().orElse(ButtonType.NO);
-            if (result != ButtonType.YES) {
-                evt.consume(); // annulla la chiusura
+            if (shouldBlockExit(unsaved)) {
+                evt.consume(); //al primo tentativo, blocca e mostra messaggio
             }
         });
 
 
 
    }
+
+    public boolean shouldBlockExit(BooleanSupplier unsaved) {
+        // Se non ci sono modifiche non salvate: esci subito
+        if (!unsaved.getAsBoolean()) {
+            exitArmed = false;
+            return false; //non bloccare l'uscita
+        }
+
+        //se ci sono modifiche non salvate, avvisa e blocca
+        if (!exitArmed) {
+            UserFeedbackViewFxml.getInstance().showError(bundle.getString("exit.pressAgain"));
+            exitArmed = true;
+            return true;
+
+        }
+
+        exitArmed = false;
+        return false;
+    }
+
+    public void disarmExitPrompt() {
+        exitArmed = false;
+    }
 }

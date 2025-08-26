@@ -30,6 +30,7 @@ public class GameController implements EventHandler {
     private UiNotices uiNotices;
     private MenuBarViewFxml menuView;
     private UserFeedbackViewFxml feedbackView;
+    private volatile boolean dirty = false;
 
 
     private GameController() {
@@ -78,10 +79,14 @@ public class GameController implements EventHandler {
     // salva sul path passato
     public void saveTo(Path path) throws IOException {
         vm.save(path); // usa il service
+        dirty = false;
+        UiNotices.getInstance().disarmExitPrompt();
     }
     // carica dal path passato
     public void loadFrom(Path path) throws IOException {
         vm.load(path);
+        dirty = false;
+        UiNotices.getInstance().disarmExitPrompt();
     }
 
     private ResourceBundle rb() {
@@ -91,12 +96,13 @@ public class GameController implements EventHandler {
     @Override
     public void newGame() {
         Platform.runLater(() -> {
+            UiNotices.getInstance().disarmExitPrompt();
             gameEndNotified = false;
             int max   = vm.getRows() * vm.getCols() - 1;
             int bombs = Math.max(1, Math.min(defaultBombs, max));
 
             vm.newGame(bombs);
-
+            dirty = true; //avvisa che ci sono modifiche non salvate
             // aggiorna solo board e feedback bar
             views.stream()
                     .filter(v -> !(v instanceof MenuBarViewFxml))
@@ -110,6 +116,7 @@ public class GameController implements EventHandler {
     }
     public void onCellClick(int r, int c, boolean rightClick,
                             Button btn, Queue<int[]> revealQueue) {
+        UiNotices.getInstance().disarmExitPrompt();
 
         if (!vm.isStarted()) return;
         var result = vm.handleClick(r, c, rightClick);
@@ -121,9 +128,11 @@ public class GameController implements EventHandler {
                 if (feedbackView != null){
                     feedbackView.update();
                 }
+                dirty = true;
             }
             case REVEAL -> {
                 revealQueue.addAll(result.getOpened());
+                dirty = true;
                 if (result.isMineHit()) {
                     boardView.revealAllMinesAndDisable();
                     lose();
@@ -171,6 +180,8 @@ public class GameController implements EventHandler {
             uiNotices.showLose();
         });
     }
+    @Override public void exit()   { MenuController.getInstance().exit(); }
+
 
     public GameViewModel model() { return vm; }
 
@@ -179,7 +190,10 @@ public class GameController implements EventHandler {
     public void updatePreferences(int bombs, String lang) {
         PreferenceService.get().setBombs(bombs);
         PreferenceService.get().setLang(lang);
+        UiNotices.getInstance().disarmExitPrompt();
     }
+
+    public boolean hasUnsavedChanges() { return dirty; }
 
 
 

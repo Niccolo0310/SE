@@ -1,6 +1,5 @@
 package ch.supsi.minesweeper.controller;
 
-import ch.supsi.minesweeper.application.PreferenceService;
 
 import ch.supsi.minesweeper.view.DataView;
 import ch.supsi.minesweeper.view.MenuBarViewFxml;
@@ -11,7 +10,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Locale;
 import java.util.MissingResourceException;
 import java.util.ResourceBundle;
 
@@ -24,15 +22,21 @@ public class MenuController {
     private final ResourceBundle aboutProps = ResourceBundle.getBundle("config");
     private MenuBarViewFxml menuView;
 
+
     private MenuController() {
-        this.bundle = ResourceBundle.getBundle("i18n.messages",
-                Locale.forLanguageTag(PreferenceService.get().getLang()));
+        this.bundle = ResourceBundle.getBundle(
+                "i18n.messages",
+                java.util.Locale.forLanguageTag(
+                        ch.supsi.minesweeper.application.PreferenceService.get().getLang()
+                )
+        );
     }
 
     public static MenuController getInstance() {
         if (myself == null) myself = new MenuController();
         return myself;
     }
+
 
     //viene Chiamata da GameController.initialize() per passare le view.
     public void initialize(List<DataView> views) {
@@ -120,17 +124,24 @@ public class MenuController {
         String author      = getProp("about.copyright", "Authors");
         String buildDate   = getProp("about.buildDate", "unknown");
 
+        var b = rb();
         javafx.application.Platform.runLater(() -> {
             var a = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.INFORMATION);
-            a.setTitle("About " + name);
-            a.setHeaderText(name + "\nAutori: " + author + "    Versione: " + version);
-            a.setContentText(description + "\nBuild info: " + buildDate);
+            a.setTitle(java.text.MessageFormat.format(b.getString("about.title"), name));
+            a.setHeaderText(java.text.MessageFormat.format(b.getString("about.header"), name, author, version));
+            a.setContentText(java.text.MessageFormat.format(b.getString("about.content"), description, buildDate));
             a.showAndWait();
         });
     }
     private String getProp(String key, String defVal) {
         try { return aboutProps.getString(key); }
         catch (MissingResourceException e) { return defVal; }
+    }
+    public void exit() {
+        boolean block = UiNotices.getInstance()
+                .shouldBlockExit(GameController.getInstance()::hasUnsavedChanges);
+        if (block) return;        //mostra messaggio e non si chiuse al primo tentativo
+        javafx.application.Platform.exit();
     }
 
 }

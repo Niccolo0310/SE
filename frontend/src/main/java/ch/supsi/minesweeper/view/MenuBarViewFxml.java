@@ -5,11 +5,9 @@ import ch.supsi.minesweeper.controller.EventHandler;
 import ch.supsi.minesweeper.controller.GameEventHandler;
 
 import ch.supsi.minesweeper.uimodel.GameViewModel;
-import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
-import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Dialog;
 import javafx.scene.control.MenuBar;
@@ -103,17 +101,7 @@ public class MenuBarViewFxml implements ControlledFxView {
         preferencesMenuItem.setOnAction(e -> showPreferencesDialog());
 
         // Esci
-        quitMenuItem.setOnAction(e -> {
-            Alert confirm = new Alert(Alert.AlertType.CONFIRMATION,
-                    bundle.getString("quit.ask"));
-            confirm.setHeaderText(null);
-            confirm.setTitle(bundle.getString("quit.title"));
-            confirm.getButtonTypes().setAll(ButtonType.YES, ButtonType.NO);
-
-            confirm.showAndWait().filter(bt -> bt == ButtonType.YES)
-                    .ifPresent(bt -> Platform.exit());
-        });
-
+        quitMenuItem.setOnAction(e -> gameEventHandler.exit());
 
 
         // all’avvio, disabilitiamo “Save” e “Save As”

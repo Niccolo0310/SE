@@ -55,7 +55,10 @@ public class MainFx extends Application {
         stage.setResizable(false);
         stage.setScene(scene);
 
-        UiNotices.getInstance().installExitConfirmation(stage);
+        UiNotices.getInstance().installExitConfirmation(
+                stage,
+                () -> GameController.getInstance().hasUnsavedChanges()
+        );
 
         stage.show();
     }
